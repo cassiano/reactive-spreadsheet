@@ -130,7 +130,7 @@ export const evaluateFormula = (sheet: SheetType, formula: string) => {
   return executeInAgregationFunctionsContext(sheet, jsFormula)
 }
 
-export const loadSheet = (sheetData: SheetDataType, fillEmptyCellsWithZeros = false) => {
+export const loadSheet = (sheetData: SheetDataType) => {
   const sheet: SheetType = {}
 
   Object.entries(sheetData).forEach(([ref, value]) => {
@@ -151,22 +151,6 @@ export const loadSheet = (sheetData: SheetDataType, fillEmptyCellsWithZeros = fa
       else throw new Error(`Invalid formula: '${trimmeValue}' must start with '='`)
     }
   })
-
-  if (fillEmptyCellsWithZeros) {
-    const dimensions: DimensionsType = sheetDimensions(sheet)
-
-    times(dimensions.rows, row =>
-      times(dimensions.cols, col => {
-        const ref = asRef([row + 1, col + 1])
-
-        if (!(ref in sheet)) {
-          sheet[ref] = {
-            signalWrapper: computed(ref, () => 0, { kind: ComputedSignalKind.Eager }),
-          }
-        }
-      })
-    )
-  }
 
   return sheet
 }
@@ -384,4 +368,45 @@ export function generateSpiralSequence(
     },
     initialCells.reduce((acc, item) => Object.assign(acc, item), {})
   ) as SheetDataType
+}
+
+export const repeat = (count: number, fn: (i: number) => string) => times(count, fn).join('')
+
+export const debounce = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fn: (...args: any[]) => void,
+  timeout: number
+): ((...args: unknown[]) => void) => {
+  let timerId: ReturnType<typeof setTimeout> | null = null
+
+  return (...args: unknown[]): void => {
+    if (timerId !== null) clearTimeout(timerId)
+
+    timerId = setTimeout(() => {
+      fn(...args)
+
+      timerId = null
+    }, timeout)
+  }
+}
+
+export const throttle = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fn: (...args: any[]) => void,
+  timeout: number,
+  eagerExecution = false
+): ((...args: unknown[]) => void) => {
+  let timerId: ReturnType<typeof setTimeout> | null = null
+
+  return (...args: unknown[]): void => {
+    if (timerId !== null) return // Return immediately if timer still pending.
+
+    if (eagerExecution) fn(...args)
+
+    timerId = setTimeout(() => {
+      if (!eagerExecution) fn(...args)
+
+      timerId = null
+    }, timeout)
+  }
 }

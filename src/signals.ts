@@ -2,7 +2,7 @@
 // Constants //
 ///////////////
 
-export let DEBUG = false
+let DEBUG = false
 
 ////////////////////////
 // Helper functions 1 //
@@ -58,7 +58,7 @@ export interface IObserver {
   hasSubject(subject: ISubject): boolean
   expire(): void
   recalculate(): void // a.k.a. "update"
-  recalculateDescendantObservers(breadcrumbs?: ComputedSignal<any>[]): void
+  recalculateStillExpiredObservers(breadcrumbs?: ComputedSignal<any>[]): void
 }
 
 export type ObserverPatternType = IObserver | ISubject
@@ -369,13 +369,11 @@ export class ComputedSignal<T> extends BaseSignal<T> implements IComputedSignal<
 
     this.get()
 
-    if (this.value !== previousValue) {
-      // Notify its own observers to update (recompute/expire) in a cascaded (recursive) fashion.
-      this.notifyObservers()
-    }
+    // If value has changed, notify its own observers to recursively update (recompute/expire).
+    if (this.value !== previousValue) this.notifyObservers()
   }
 
-  recalculateDescendantObservers(breadcrumbs: ComputedSignal<any>[] = []): void {
+  recalculateStillExpiredObservers(breadcrumbs: ComputedSignal<any>[] = []): void {
     debug(
       () => this.observers.size > 0 && `Recalculating ${this.label}'s observers: ${BaseSignal.labels(this.observers)}`
     )
@@ -387,7 +385,7 @@ export class ComputedSignal<T> extends BaseSignal<T> implements IComputedSignal<
 
     this.observers.forEach(observer => {
       observer.recalculate()
-      observer.recalculateDescendantObservers(breadcrumbs)
+      observer.recalculateStillExpiredObservers(breadcrumbs)
     })
   }
 
@@ -408,7 +406,7 @@ export class ComputedSignal<T> extends BaseSignal<T> implements IComputedSignal<
     this.valueFn = newValueFn
     this.expire()
     this.recalculate()
-    this.recalculateDescendantObservers()
+    this.recalculateStillExpiredObservers() // Usually unfired effects...
   }
 }
 

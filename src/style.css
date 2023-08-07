@@ -95,12 +95,3 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
-
-input {
-  color: Black;
-}
-
-::selection {
-  color: Black;
-  background: LightBlue;
-}
