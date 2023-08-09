@@ -21,7 +21,7 @@ import './style.css'
 
 // Spiral Fibonacci sequence.
 const sheetData: SheetDataType = generateSpiralSequence(
-  30,
+  20,
   'south',
   'left',
   [{ A1: 0 }, { A2: 1 }],

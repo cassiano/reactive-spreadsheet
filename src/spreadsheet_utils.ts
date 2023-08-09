@@ -125,7 +125,19 @@ export const evaluateFormula = (sheet: SheetType, formula: string) => {
     // Expand all ranges to 2D matrices of refs.
     .replace(/\b([A-Z]+\d+):([A-Z]+\d+)\b/g, (_, from, to) => JSON.stringify(expandRange(from, to)).replaceAll('"', ''))
     // Replace all refs by corresponding signal calls.
-    .replaceAll(/\b([A-Z]+\d+)\b/g, (_, ref) => `(sheet['${ref}'].signalWrapper())`)
+    .replaceAll(
+      /\b([A-Z]+\d+)\b/g,
+      (_, ref) => `(
+        !('${ref}' in sheet) && (sheet['${ref}'] = {
+          signalWrapper: computed(
+            '${ref}',
+            () => 0,
+            { kind: ComputedSignalKind.Eager }
+          )
+        }),
+        sheet['${ref}'].signalWrapper()
+      )`
+    )
 
   return executeInAgregationFunctionsContext(sheet, jsFormula)
 }
@@ -136,19 +148,27 @@ export const loadSheet = (sheetData: SheetDataType) => {
   Object.entries(sheetData).forEach(([ref, value]) => {
     ref = ref.toUpperCase()
 
-    if (typeof value === 'number')
-      sheet[ref] = {
-        signalWrapper: computed(ref, () => value, { kind: ComputedSignalKind.Eager }),
-      }
-    else {
+    if (typeof value === 'number') {
+      const fn = () => value
+
+      if (ref in sheet) sheet[ref].signalWrapper.set(fn)
+      else
+        sheet[ref] = {
+          signalWrapper: computed(ref, fn, { kind: ComputedSignalKind.Eager }),
+        }
+    } else {
       const trimmeValue = value.trim()
 
-      if (trimmeValue[0] === '=')
-        sheet[ref] = {
-          formula: value,
-          signalWrapper: computed(ref, () => evaluateFormula(sheet, trimmeValue), { kind: ComputedSignalKind.Eager }),
-        }
-      else throw new Error(`Invalid formula: '${trimmeValue}' must start with '='`)
+      if (trimmeValue[0] === '=') {
+        const fn = () => evaluateFormula(sheet, trimmeValue)
+
+        if (ref in sheet) sheet[ref].signalWrapper.set(fn)
+        else
+          sheet[ref] = {
+            formula: value,
+            signalWrapper: computed(ref, fn, { kind: ComputedSignalKind.Eager }),
+          }
+      } else throw new Error(`Invalid formula: '${trimmeValue}' must start with '='`)
     }
   })
 
