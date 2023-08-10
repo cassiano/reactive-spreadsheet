@@ -522,7 +522,7 @@ export const isWritableSignalWrapper = <T>(wrapper: SignalWrapperType<T>): wrapp
 // Helper functions 2 //
 ////////////////////////
 
-function signalReplacerFn<T>(key: string, value: any) {
+export function signalReplacerFn<T>(key: string, value: any) {
   if (key === 'observers' || key === 'subjects') {
     return [...value].map((s: IBaseSignal<T>) => s.label)
   } else if (value instanceof Function) {
@@ -534,7 +534,7 @@ function signalReplacerFn<T>(key: string, value: any) {
   }
 }
 
-export const inspect = <T>({ signal }: SignalWrapperType<T>) => {
+export const inspectSignal = <T>({ signal }: SignalWrapperType<T>) => {
   log(JSON.stringify(signal, signalReplacerFn<T>, 2))
 }
 

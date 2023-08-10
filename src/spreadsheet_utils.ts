@@ -1,4 +1,4 @@
-import { ComputedSignalKind, IComputedSignalWrapper, computed, times } from './signals'
+import { ComputedSignalKind, IComputedSignalWrapper, computed, times, signalReplacerFn } from './signals'
 
 const ALPHABET_LENGTH = 'Z'.charCodeAt(0) - 'A'.charCodeAt(0) + 1
 
@@ -20,12 +20,12 @@ export type SheetDataType = {
   [ref: RefType]: SheetCellType
 }
 export type SheetType = {
-  [ref: RefType]: {
-    formula?: SheetCellType
-    signalWrapper: IComputedSignalWrapper<number>
+  cells: {
+    [ref: RefType]: {
+      formula?: SheetCellType
+      signalWrapper: IComputedSignalWrapper<number>
+    }
   }
-}
-export type DimensionsType = {
   rows: number
   cols: number
 }
@@ -121,29 +121,25 @@ const executeInAgregationFunctionsContext = (sheet: SheetType, jsFormula: string
 export const evaluateFormula = (sheet: SheetType, formula: string) => {
   const jsFormula = formula
     .slice(1)
-    .toUpperCase()
     // Expand all ranges to 2D matrices of refs.
-    .replace(/\b([A-Z]+\d+):([A-Z]+\d+)\b/g, (_, from, to) => JSON.stringify(expandRange(from, to)).replaceAll('"', ''))
-    // Replace all refs by corresponding signal calls.
-    .replaceAll(
-      /\b([A-Z]+\d+)\b/g,
-      (_, ref) => `(
-        !('${ref}' in sheet) && (sheet['${ref}'] = {
-          signalWrapper: computed(
-            '${ref}',
-            () => 0,
-            { kind: ComputedSignalKind.Eager }
-          )
-        }),
-        sheet['${ref}'].signalWrapper()
-      )`
+    .replace(/\b([A-Z]+\d+):([A-Z]+\d+)\b/gi, (_, from, to) =>
+      JSON.stringify(expandRange(from, to)).replaceAll('"', '')
     )
+    // Replace all refs by corresponding signal calls.
+    .replaceAll(/\b([A-Z]+\d+)\b/gi, (_, ref) => {
+      ref = ref.toUpperCase()
+
+      return `(
+        !('${ref}' in sheet.cells) && setSheetCell(sheet, '${ref}', () => 0),
+        sheet.cells['${ref}'].signalWrapper()
+      )`
+    })
 
   return executeInAgregationFunctionsContext(sheet, jsFormula)
 }
 
 export const loadSheet = (sheetData: SheetDataType) => {
-  const sheet: SheetType = {}
+  const sheet: SheetType = { cells: {}, rows: 0, cols: 0 }
 
   Object.entries(sheetData).forEach(([ref, value]) => {
     ref = ref.toUpperCase()
@@ -151,23 +147,20 @@ export const loadSheet = (sheetData: SheetDataType) => {
     if (typeof value === 'number') {
       const fn = () => value
 
-      if (ref in sheet) sheet[ref].signalWrapper.set(fn)
-      else
-        sheet[ref] = {
-          signalWrapper: computed(ref, fn, { kind: ComputedSignalKind.Eager }),
-        }
+      if (ref in sheet.cells) sheet.cells[ref].signalWrapper.set(fn)
+      else setSheetCell(sheet, ref, fn)
     } else {
       const trimmeValue = value.trim()
 
       if (trimmeValue[0] === '=') {
         const fn = () => evaluateFormula(sheet, trimmeValue)
 
-        if (ref in sheet) sheet[ref].signalWrapper.set(fn)
-        else
-          sheet[ref] = {
-            formula: value,
-            signalWrapper: computed(ref, fn, { kind: ComputedSignalKind.Eager }),
-          }
+        if (ref in sheet.cells) {
+          sheet.cells[ref].formula = trimmeValue
+          sheet.cells[ref].signalWrapper.set(fn)
+        } else {
+          setSheetCell(sheet, ref, fn, trimmeValue)
+        }
       } else throw new Error(`Invalid formula: '${trimmeValue}' must start with '='`)
     }
   })
@@ -175,10 +168,22 @@ export const loadSheet = (sheetData: SheetDataType) => {
   return sheet
 }
 
+export const setSheetCell = (sheet: SheetType, ref: RefType, fn: () => number, formula?: string) => {
+  sheet.cells[ref] = {
+    formula,
+    signalWrapper: computed(ref, fn, { kind: ComputedSignalKind.Eager }),
+  }
+
+  const { row, col } = asCoords(ref)
+
+  sheet.rows = Math.max(sheet.rows, row)
+  sheet.cols = Math.max(sheet.cols, col)
+}
+
 export const updateCellFormula = (sheet: SheetType, ref: RefType, newFormula: string) => {
   ref = ref.toUpperCase()
 
-  const sheetRef = sheet[ref]
+  const sheetRef = sheet.cells[ref]
 
   sheetRef.formula = newFormula
   sheetRef.signalWrapper.set(() => evaluateFormula(sheet, newFormula))
@@ -187,7 +192,7 @@ export const updateCellFormula = (sheet: SheetType, ref: RefType, newFormula: st
 export const updateCellValue = (sheet: SheetType, ref: RefType, newValue: number) => {
   ref = ref.toUpperCase()
 
-  const sheetRef = sheet[ref]
+  const sheetRef = sheet.cells[ref]
 
   sheetRef.formula = undefined
   sheetRef.signalWrapper.set(() => newValue)
@@ -195,19 +200,15 @@ export const updateCellValue = (sheet: SheetType, ref: RefType, newValue: number
 
 export const sheetAsJson = (sheet: SheetType) =>
   JSON.stringify(
-    Object.entries(sheet).map(([key, value]) => ({ ref: key, formula: value.formula, value: value.signalWrapper() })),
-    undefined,
+    Object.entries(sheet.cells).map(([key, value]) => ({
+      ref: key,
+      formula: value.formula,
+      value: value.signalWrapper(),
+      signal: value.signalWrapper.signal,
+    })),
+    signalReplacerFn,
     2
   )
-
-export const sheetDimensions = (sheet: SheetType): DimensionsType => {
-  const coords = Object.keys(sheet).map(ref => asCoords(ref))
-
-  return {
-    rows: Math.max(...coords.map(coord => coord.row)),
-    cols: Math.max(...coords.map(coord => coord.col)),
-  }
-}
 
 export const truncate = (text: string, limit: number, filler = ' ') => {
   const paddedText = text.trim().padEnd(limit, filler)
@@ -216,24 +217,22 @@ export const truncate = (text: string, limit: number, filler = ' ') => {
 }
 
 export const sheetAsTable = (sheet: SheetType, padding = 64) => {
-  const dimensions = sheetDimensions(sheet)
-
-  const colLabels = ['', ...range(1, dimensions.cols).map(col => '[' + colAsLabel(col) + ']')]
+  const colLabels = ['', ...range(1, sheet.cols).map(col => '[' + colAsLabel(col) + ']')]
   const results = [colLabels]
 
-  range(1, dimensions.rows).forEach(row => {
+  range(1, sheet.rows).forEach(row => {
     const rowLabel = '[' + row.toString() + ']'
     const rowResult = [rowLabel]
 
-    range(1, dimensions.cols).forEach(col => {
+    range(1, sheet.cols).forEach(col => {
       const colLabel = colAsLabel(col)
       const ref = [colLabel, row].join('')
 
       rowResult.push(
         ref in sheet
-          ? sheet[ref].formula !== undefined
-            ? sheet[ref].signalWrapper().toString() + ` ${sheet[ref].formula}`
-            : sheet[ref].signalWrapper().toString()
+          ? sheet.cells[ref].formula !== undefined
+            ? sheet.cells[ref].signalWrapper().toString() + ` ${sheet.cells[ref].formula}`
+            : sheet.cells[ref].signalWrapper().toString()
           : ''
       )
     })
@@ -430,3 +429,5 @@ export const throttle = (
     }, timeout)
   }
 }
+
+export const deleteKeys = (object: { [key: string]: unknown }) => Object.keys(object).forEach(key => delete object[key])

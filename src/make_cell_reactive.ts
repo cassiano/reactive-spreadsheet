@@ -1,16 +1,17 @@
-import { ComputedSignalKind, IComputedSignalWrapper, computed, debug, effect } from './signals'
+import { refreshSheet, sheetHasExpanded, setFocusedRef } from './main'
+import { IComputedSignalWrapper, debug, effect } from './signals'
 import {
-  DimensionsType,
   RefType,
   SheetType,
   asCoords,
   asRef,
   evaluateFormula,
+  setSheetCell,
   updateCellFormula,
   updateCellValue,
 } from './spreadsheet_utils'
 
-export type CellsType = {
+export type CellInputsType = {
   [ref: RefType]: HTMLInputElement
 }
 
@@ -20,13 +21,7 @@ export type EffectsType = {
 
 let shiftPressed: boolean = false
 
-export const makeCellNavigable = (
-  ref: RefType,
-  el: HTMLInputElement,
-  sheet: SheetType,
-  cells: CellsType,
-  dimensions: DimensionsType
-) => {
+export const makeCellNavigable = (ref: RefType, el: HTMLInputElement, sheet: SheetType, cellnputs: CellInputsType) => {
   const { row, col } = asCoords(ref)
 
   ref = ref.toUpperCase()
@@ -37,29 +32,30 @@ export const makeCellNavigable = (
     switch (e.key) {
       case 'Enter':
       case 'ArrowDown':
-        targetRef = asRef([(row % dimensions.rows) + 1, row < dimensions.rows ? col : (col % dimensions.cols) + 1])
+        targetRef = asRef([(row % sheet.rows) + 1, row < sheet.rows ? col : (col % sheet.cols) + 1])
 
-        cells[targetRef].focus()
+        setFocusedRef(targetRef)
+        setTimeout(() => cellnputs[targetRef!].focus(), 0)
         break
 
       case 'ArrowUp':
         targetRef = asRef([
-          ((dimensions.rows + row - 2) % dimensions.rows) + 1,
-          row > 1 ? col : ((dimensions.cols + col - 2) % dimensions.cols) + 1,
+          ((sheet.rows + row - 2) % sheet.rows) + 1,
+          row > 1 ? col : ((sheet.cols + col - 2) % sheet.cols) + 1,
         ])
 
-        cells[targetRef].focus()
+        cellnputs[targetRef].focus()
         break
 
       case 'Tab': {
         if (shiftPressed && row === 1 && col === 1) {
           e.preventDefault()
 
-          cells[asRef([dimensions.rows, dimensions.cols])].focus()
-        } else if (!shiftPressed && row === dimensions.rows && col === dimensions.cols) {
+          cellnputs[asRef([sheet.rows, sheet.cols])].focus()
+        } else if (!shiftPressed && row === sheet.rows && col === sheet.cols) {
           e.preventDefault()
 
-          cells['A1'].focus()
+          cellnputs['A1'].focus()
         }
 
         break
@@ -70,9 +66,9 @@ export const makeCellNavigable = (
         break
 
       case 'Escape':
-        const sheetRef = sheet[ref]
+        const sheetRef = sheet.cells[ref]
 
-        cells[ref].value =
+        cellnputs[ref].value =
           ref in sheet
             ? sheetRef.formula !== undefined
               ? sheetRef.formula.toString()
@@ -86,18 +82,25 @@ export const makeCellNavigable = (
   el.addEventListener('keyup', (e: KeyboardEvent) => {
     if (e.key === 'Shift') shiftPressed = false
   })
+
+  el.addEventListener('focus', () => {
+    setFocusedRef(ref)
+  })
 }
+
+let effectVersion: { [ref: RefType]: number } = {}
 
 export const makeCellReactive = (
   ref: RefType,
   el: HTMLInputElement,
   sheet: SheetType,
-  cells: CellsType,
+  cellInputs: CellInputsType,
   effects: EffectsType
 ) => {
   ref = ref.toUpperCase()
+  effectVersion[ref] ??= 1
 
-  effects[ref] = effect(`${ref}-cell-updater`, () => {
+  effects[ref] = effect(`${ref}-updater-v${effectVersion[ref]++}`, () => {
     const displayValue = evaluateFormula(sheet, `=${ref}`)
 
     debug(() => `Updating cell ${ref} with value ${displayValue}`)
@@ -110,19 +113,28 @@ export const makeCellReactive = (
     const target = e.target as HTMLInputElement
     const value = target.value.trim()
 
-    resetCellsColors(cells)
+    resetCellInputsColors(cellInputs)
 
     if (value.startsWith('=')) updateCellFormula(sheet, ref, value)
     else updateCellValue(sheet, ref, +value)
+
+    if (sheetHasExpanded()) refreshSheet()
   })
 
-  let focusTimeoutId: number
+  let focusTimeoutId: number | null
 
-  const selectCell = (): number => setTimeout(() => cells[ref].select(), 0)
+  const selectCell = (): number =>
+    setTimeout(() => {
+      focusTimeoutId = null
+
+      cellInputs[ref].select()
+    }, 0)
 
   el.addEventListener('focus', (e: Event) => {
     const target = e.target as HTMLInputElement
-    const sheetRef = sheet[ref]
+    setFocusedRef(ref)
+
+    const sheetRef = sheet.cells[ref]
 
     if (sheetRef.formula !== undefined) target.value = sheetRef.formula.toString()
 
@@ -130,12 +142,13 @@ export const makeCellReactive = (
   })
 
   el.addEventListener('blur', (e: Event) => {
-    if (focusTimeoutId !== undefined) clearTimeout(focusTimeoutId)
-
     const target = e.target as HTMLInputElement
-    const sheetRef = sheet[ref]
 
-    if (sheetRef.formula !== undefined) target.value = sheet[ref].signalWrapper().toString()
+    if (focusTimeoutId !== null) clearTimeout(focusTimeoutId)
+
+    const sheetRef = sheet.cells[ref]
+
+    if (sheetRef.formula !== undefined) target.value = sheetRef.signalWrapper().toString()
   })
 
   el.addEventListener('click', () => {
@@ -143,11 +156,11 @@ export const makeCellReactive = (
   })
 }
 
-export const makeCellAutoGenerated = (
+export const makeCellAutoReactive = (
   ref: RefType,
   el: HTMLInputElement,
   sheet: SheetType,
-  cells: CellsType,
+  cellInputs: CellInputsType,
   effects: EffectsType
 ) => {
   ref = ref.toUpperCase()
@@ -155,22 +168,19 @@ export const makeCellAutoGenerated = (
   const changeListener = (e: Event) => {
     const target = e.target as HTMLInputElement
     const value = target.value.trim()
-    const fn = () => 0
 
-    if (ref in sheet) sheet[ref].signalWrapper.set(fn)
-    else
-      sheet[ref] = {
-        signalWrapper: computed(ref, fn, { kind: ComputedSignalKind.Eager }),
-      }
+    if (!(ref in sheet.cells)) setSheetCell(sheet, ref, () => 0)
 
-    resetCellsColors(cells)
+    resetCellInputsColors(cellInputs)
 
     if (value.startsWith('=')) updateCellFormula(sheet, ref, value)
     else updateCellValue(sheet, ref, +value)
 
-    el.removeEventListener('change', changeListener)
+    target.removeEventListener('change', changeListener)
 
-    makeCellReactive(ref, el, sheet, cells, effects)
+    makeCellReactive(ref, target, sheet, cellInputs, effects)
+
+    if (sheetHasExpanded()) refreshSheet()
   }
 
   el.addEventListener('change', changeListener)
@@ -184,6 +194,6 @@ const markCellAsUnchanged = (el: HTMLInputElement) => {
   el.style.backgroundColor = 'White'
 }
 
-const resetCellsColors = (cells: CellsType) => {
-  Object.values(cells).forEach(markCellAsUnchanged)
+const resetCellInputsColors = (cellInputs: CellInputsType) => {
+  Object.values(cellInputs).forEach(markCellAsUnchanged)
 }
