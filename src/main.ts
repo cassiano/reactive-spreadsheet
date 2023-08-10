@@ -54,18 +54,8 @@ type CellProps = {
   col: number
 }
 
-type TableDataProps = {
-  element: HTML
-}
-
 type SpreadSheetProps = {
   dimensions: DimensionsType
-}
-
-type CellTableRowProps = {
-  size: number
-  row: number
-  cols: number
 }
 
 // ---------------------------------------------------------------------------------------------
