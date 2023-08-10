@@ -7,6 +7,7 @@ import {
 } from './make_cell_reactive'
 import {
   DimensionsType,
+  RefType,
   SheetDataType,
   SheetType,
   asRef,
@@ -19,9 +20,11 @@ import {
 } from './spreadsheet_utils'
 import './style.css'
 
+// ---------------------------------------------------------------------------------------------
+
 // Spiral Fibonacci sequence.
 const sheetData: SheetDataType = generateSpiralSequence(
-  20,
+  10,
   'south',
   'left',
   [{ A1: 0 }, { A2: 1 }],
@@ -31,49 +34,111 @@ const sheetData: SheetDataType = generateSpiralSequence(
 const sheet: SheetType = loadSheet(sheetData)
 const dimensions: DimensionsType = sheetDimensions(sheet)
 
-const columnLabels = repeat(dimensions.cols, col => `<th>${colAsLabel(col + 1)}</th>`)
+// ---------------------------------------------------------------------------------------------
 
-const template = `
-  <table>
-    <tr>
-      <th></th>
-      ${columnLabels}
-      <th></th>
-    </tr>
-    ${repeat(
-      dimensions.rows,
-      row =>
-        '<tr>' +
-        `<td><bold>${row + 1}</bold></td>` +
-        repeat(
-          dimensions.cols,
-          col =>
-            '<td>' +
-            `<input size="${Math.max(2, window.innerWidth / dimensions.cols) / 15}" id='${asRef([
-              row + 1,
-              col + 1,
-            ])}'/>` +
-            '</td>'
-        ) +
-        `<td><bold>${row + 1}</bold></td>` +
-        '</tr>'
-    )}
-    <tr>
-      <th></th>
-      ${columnLabels}
-      <th></th>
-    </tr>
-  </table>
-`
+///////////
+// Types //
+///////////
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = template
+type HTML = string
+type FC<T> = (props: T) => HTML
+
+type ColumnLabelsProps = {
+  from: number
+  to: number
+}
+
+type CellProps = {
+  size: number
+  row: number
+  col: number
+}
+
+type TableDataProps = {
+  element: HTML
+}
+
+type SpreadSheetProps = {
+  dimensions: DimensionsType
+}
+
+type CellTableRowProps = {
+  size: number
+  row: number
+  cols: number
+}
+
+// ---------------------------------------------------------------------------------------------
+
+////////////////
+// Components //
+////////////////
+
+const ColumnLabelsTHs: FC<ColumnLabelsProps> = ({ from, to }) => {
+  return repeat(
+    to - from + 1,
+    col => `
+      <th>${colAsLabel(col + from)}</th>
+    `
+  )
+}
+
+const Cell: FC<CellProps> = ({ size, row, col }) => {
+  return `
+    <input size="${size}" id='${asRef([row + 1, col + 1])}'/>
+  `
+}
+
+const SpreadSheet: FC<SpreadSheetProps> = ({ dimensions }) => {
+  const size = Math.max(2, window.innerWidth / dimensions.cols / 15)
+
+  return `
+    <table>
+      <tr>
+        <th id="column-label-top-start"></th>
+        ${ColumnLabelsTHs({ from: 1, to: dimensions.cols })}
+        <th id="column-label-top-end"></th>
+      </tr>
+      ${repeat(
+        dimensions.rows,
+        row => `
+        <tr>
+          <td><bold>${row + 1}</bold></td>
+          ${repeat(
+            dimensions.cols,
+            col => `
+              <td>
+                ${Cell({ size, row, col })}
+              </td>
+            `
+          )}
+          <td><bold>${row + 1}</bold></td>
+        </tr>
+      `
+      )}
+      <tr>
+        <th id="column-label-bottom-start"></th>
+        ${ColumnLabelsTHs({ from: 1, to: dimensions.cols })}
+        <th id="column-label-bottom-end"></th>
+      </tr>
+    </table>
+  `
+}
+
+// ---------------------------------------------------------------------------------------------
+
+document.querySelector<HTMLDivElement>('#app')!.innerHTML = SpreadSheet({ dimensions })
 
 const effects: EffectsType = {}
 const refs = expandRange('A1', asRef([dimensions.rows, dimensions.cols])).flat(2)
-const cells: CellsType = refs.reduce(
-  (acc, ref) => ({ ...acc, [ref]: document.querySelector<HTMLInputElement>(`#${ref}`) }),
-  {}
-)
+
+const cells: CellsType = refs.reduce((acc: CellsType, ref: RefType) => {
+  const refInput = document.querySelector<HTMLInputElement>(`#${ref}`)
+
+  if (refInput !== null) acc[ref] = refInput
+
+  return acc
+}, {})
 
 Object.entries(cells).forEach(([ref, el]) => {
   if (ref in sheet) makeCellReactive(ref, el, sheet, cells, effects)
