@@ -6,7 +6,7 @@ import {
   asCoords,
   asRef,
   evaluateFormula,
-  setSheetCell,
+  addCell,
   updateCellFormula,
   updateCellValue,
 } from './spreadsheet_utils'
@@ -93,11 +93,12 @@ export const makeCellReactive = (
   effectVersion[ref] ??= 1
 
   effects[ref] = effect(`${ref}-updater-v${effectVersion[ref]++}`, () => {
-    const displayValue = evaluateFormula(sheet, `=${ref}`)
+    const value = evaluateFormula(sheet, `=${ref}`)
 
-    debug(() => `Updating cell ${ref} with value ${displayValue}`)
+    debug(() => `Updating cell ${ref} with value ${value}`)
 
-    el.value = displayValue.toString()
+    el.value = value.toString()
+
     markCellAsChanged(el)
   })
 
@@ -124,6 +125,7 @@ export const makeCellReactive = (
 
   el.addEventListener('focus', (e: Event) => {
     const target = e.target as HTMLInputElement
+
     setFocusedRef(ref)
 
     const sheetRef = sheet.cells[ref]
@@ -161,7 +163,7 @@ export const makeCellAutoReactive = (
     const target = e.target as HTMLInputElement
     const value = target.value.trim()
 
-    if (!(ref in sheet.cells)) setSheetCell(sheet, ref, () => 0)
+    if (!(ref in sheet.cells)) addCell(sheet, ref, () => 0)
 
     resetCellInputsColors(cellInputs)
 

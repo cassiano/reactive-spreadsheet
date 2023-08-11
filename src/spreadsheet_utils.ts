@@ -138,7 +138,7 @@ export const evaluateFormula = (sheet: SheetType, formula: string) => {
       ref = ref.toUpperCase()
 
       return `(
-        !('${ref}' in sheet.cells) && setSheetCell(sheet, '${ref}', () => 0),
+        !('${ref}' in sheet.cells) && addCell(sheet, '${ref}', () => 0),
         sheet.cells['${ref}'].signalWrapper()
       )`
     })
@@ -156,7 +156,7 @@ export const loadSheet = (sheetData: SheetDataType) => {
       const fn = () => value
 
       if (ref in sheet.cells) sheet.cells[ref].signalWrapper.set(fn)
-      else setSheetCell(sheet, ref, fn)
+      else addCell(sheet, ref, fn)
     } else {
       const trimmeValue = value.trim()
 
@@ -167,7 +167,7 @@ export const loadSheet = (sheetData: SheetDataType) => {
           sheet.cells[ref].formula = trimmeValue
           sheet.cells[ref].signalWrapper.set(fn)
         } else {
-          setSheetCell(sheet, ref, fn, trimmeValue)
+          addCell(sheet, ref, fn, trimmeValue)
         }
       } else throw new Error(`Invalid formula: '${trimmeValue}' must start with '='`)
     }
@@ -176,7 +176,7 @@ export const loadSheet = (sheetData: SheetDataType) => {
   return sheet
 }
 
-export const setSheetCell = (sheet: SheetType, ref: RefType, fn: () => number, formula?: string) => {
+export const addCell = (sheet: SheetType, ref: RefType, fn: () => number, formula?: string) => {
   sheet.cells[ref] = {
     formula,
     signalWrapper: computed(ref, fn, { kind: ComputedSignalKind.Eager }),
