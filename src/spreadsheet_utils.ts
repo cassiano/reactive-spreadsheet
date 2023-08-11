@@ -106,14 +106,22 @@ export const expandRange = (from: RefType, to: RefType) => {
 
 const executeInAgregationFunctionsContext = (sheet: SheetType, jsFormula: string): number => {
   // Agregation functions, which must be in the same context as the `eval`.
-  const SUM = (refs: number[][]) => refs.flat(2).reduce((acc, item) => acc + item, 0)
-  const COUNT = (refs: number[][]) => refs.flat(2).length
-  const MULT = (refs: number[][]) => refs.flat(2).reduce((acc, item) => acc * item, 1)
-  const AVG = (refs: number[][]) => SUM(refs) / COUNT(refs)
-  const MAX = (refs: number[][]) => Math.max(...refs.flat(2))
-  const MIN = (refs: number[][]) => Math.min(...refs.flat(2))
-  const COLS = (refs: number[][]) => (refs[0] ?? []).length
-  const ROWS = (refs: number[][]) => refs.length
+  const sum = (refs: number[][]) => refs.flat(2).reduce((acc, item) => acc + item, 0)
+  const SUM = sum
+  const count = (refs: number[][]) => refs.flat(2).length
+  const COUNT = count
+  const mult = (refs: number[][]) => refs.flat(2).reduce((acc, item) => acc * item, 1)
+  const MULT = mult
+  const avg = (refs: number[][]) => SUM(refs) / COUNT(refs)
+  const AVG = avg
+  const max = (refs: number[][]) => Math.max(...refs.flat(2))
+  const MAX = max
+  const min = (refs: number[][]) => Math.min(...refs.flat(2))
+  const MIN = min
+  const cols = (refs: number[][]) => (refs[0] ?? []).length
+  const COLS = cols
+  const rows = (refs: number[][]) => refs.length
+  const ROWS = rows
 
   return eval(jsFormula)
 }
