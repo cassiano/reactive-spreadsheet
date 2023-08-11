@@ -1,10 +1,4 @@
-import {
-  CellInputsType,
-  EffectsType,
-  makeCellAutoReactive,
-  makeCellNavigable,
-  makeCellReactive,
-} from './make_cell_reactive'
+import { makeCellAutoReactive, makeCellNavigable, makeCellReactive } from './make_cell_reactive'
 import {
   SheetDataType,
   SheetType,
@@ -18,12 +12,21 @@ import {
 } from './spreadsheet_utils'
 import './style.css'
 import { RefType } from './spreadsheet_utils'
+import { IComputedSignal } from './signals'
 
 // ---------------------------------------------------------------------------------------------
 
 ///////////
 // Types //
 ///////////
+
+export type CellInputsType = {
+  [ref: RefType]: HTMLInputElement
+}
+
+export type EffectsType = {
+  [ref: RefType]: IComputedSignal<void>
+}
 
 type HTML = string
 type FC<T> = (props: T) => HTML
@@ -123,7 +126,7 @@ const renderSheet = (sheet: SheetType) =>
 const clearPreviousSheetData = (cellInputs: CellInputsType, effects: EffectsType) => {
   // Remove all effect signals as observers of the sheet cells.
   Object.entries(effects).forEach(([ref, effect]) => {
-    sheet.cells[ref].signalWrapper.signal.removeObserver(effect.signal)
+    sheet.cells[ref].signalWrapper.signal.removeObserver(effect)
   })
 
   // Delete all effects.

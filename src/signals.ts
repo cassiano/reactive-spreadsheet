@@ -509,8 +509,8 @@ export const computed = function <T>(
   return wrapper
 }
 
-export const effect = <T>(label: string, fn: (previousValue?: T) => T, defaultValue?: T): IComputedSignalWrapper<T> =>
-  computed(label, fn, { kind: ComputedSignalKind.Eager, defaultValue })
+export const effect = <T>(label: string, fn: (previousValue?: T) => T, defaultValue?: T): IComputedSignal<T> =>
+  computed(label, fn, { kind: ComputedSignalKind.Eager, defaultValue }).signal
 
 // https://tsplay.dev/Nr37Vm
 export const isComputedSignalWrapper = <T>(wrapper: SignalWrapperType<T>): wrapper is IComputedSignalWrapper<T> =>

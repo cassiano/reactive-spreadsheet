@@ -1,5 +1,5 @@
-import { refreshSheet, sheetHasExpanded, setFocusedRef } from './main'
-import { IComputedSignalWrapper, debug, effect } from './signals'
+import { refreshSheet, sheetHasExpanded, setFocusedRef, CellInputsType, EffectsType } from './main'
+import { debug, effect } from './signals'
 import {
   RefType,
   SheetType,
@@ -10,14 +10,6 @@ import {
   updateCellFormula,
   updateCellValue,
 } from './spreadsheet_utils'
-
-export type CellInputsType = {
-  [ref: RefType]: HTMLInputElement
-}
-
-export type EffectsType = {
-  [ref: RefType]: IComputedSignalWrapper<void>
-}
 
 let shiftPressed: boolean = false
 
