@@ -303,4 +303,5 @@ export const refreshSheet = () => {
 if (sheetHasExpanded()) refreshSheet()
 
 // window.sheetAsJson = sheetAsJson
+// window.sheetAsTable = sheetAsTable
 // window.sheet = sheet

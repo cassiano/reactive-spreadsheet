@@ -237,7 +237,7 @@ export const sheetAsTable = (sheet: SheetType, padding = 64) => {
       const ref = [colLabel, row].join('')
 
       rowResult.push(
-        ref in sheet
+        ref in sheet.cells
           ? sheet.cells[ref].formula !== undefined
             ? sheet.cells[ref].signalWrapper().toString() + ` ${sheet.cells[ref].formula}`
             : sheet.cells[ref].signalWrapper().toString()
