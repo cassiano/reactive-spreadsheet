@@ -2,6 +2,7 @@ import { makeCellAutoReactive, makeCellNavigable, makeCellReactive } from './mak
 import {
   SheetDataType,
   SheetType,
+  addCell,
   asRef,
   colAsLabel,
   deleteKeys,
@@ -78,7 +79,9 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
       <tr>
         <th></th>
         ${columnLabels}
-        <th></th>
+        <th>
+          <a href="#" id="add-col" title="Add column">[+]</a>
+        </th>
       </tr>
       ${repeat(
         rows,
@@ -98,7 +101,9 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
       `
       )}
       <tr>
-        <th></th>
+        <th>
+          <a href="#" id="add-row" title="Add row">[+]</a>
+        </th>
         ${columnLabels}
         <th></th>
       </tr>
@@ -150,6 +155,20 @@ const processSheetCells = (sheet: SheetType, cellInputs: CellInputsType, effects
     else makeCellAutoReactive(ref, el, sheet, cellInputs, effects)
 
     makeCellNavigable(ref, el, sheet, cellInputs)
+  })
+
+  document.querySelector<HTMLAnchorElement>('#add-col')?.addEventListener('click', (e: Event) => {
+    e.preventDefault()
+
+    addCell(sheet, asRef([1, sheet.cols + 1]), () => 0)
+    refreshSheet()
+  })
+
+  document.querySelector<HTMLAnchorElement>('#add-row')?.addEventListener('click', (e: Event) => {
+    e.preventDefault()
+
+    addCell(sheet, asRef([sheet.rows + 1, 1]), () => 0)
+    refreshSheet()
   })
 }
 
