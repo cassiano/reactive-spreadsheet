@@ -534,8 +534,14 @@ export function signalReplacerFn<T>(key: string, value: any) {
   }
 }
 
-export const inspectSignal = <T>({ signal }: SignalWrapperType<T>) => {
-  log(JSON.stringify(signal, signalReplacerFn<T>, 2))
+export const inspectSignal = <T>(signalOrWrapper: BaseSignal<T> | SignalWrapperType<T>) => {
+  log(
+    JSON.stringify(
+      signalOrWrapper instanceof BaseSignal ? signalOrWrapper : signalOrWrapper.signal,
+      signalReplacerFn<T>,
+      2
+    )
+  )
 }
 
 export const subjects = (computedSignalWrapper: IComputedSignalWrapper<any>) =>
