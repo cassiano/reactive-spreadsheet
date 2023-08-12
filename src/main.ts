@@ -117,8 +117,8 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
 // ---------------------------------------------------------------------------------------------
 
 const displaySheet = (sheet: SheetType, cellInputs: CellInputsType, effects: EffectsType) => {
-  renderSheet(sheet)
   clearPreviousSheetData(cellInputs, effects)
+  renderSheet(sheet)
   addSheetBehaviors(sheet, cellInputs, effects)
 
   if (focusedRef !== null) cellInputs[focusedRef].click()
@@ -320,7 +320,7 @@ export const refreshSheet = () => {
   visible.cols = sheet.cols
 }
 
-if (sheetHasExpanded()) refreshSheet()
+refreshSheet()
 
 // window.sheetAsJson = sheetAsJson
 // window.sheetAsTable = sheetAsTable
