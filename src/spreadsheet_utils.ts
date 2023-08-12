@@ -104,23 +104,25 @@ export const expandRange = (from: RefType, to: RefType) => {
   )
 }
 
+type numberMatrix = number[][]
+
 const executeInAgregationFunctionsContext = (sheet: SheetType, jsFormula: string): number => {
   // Agregation functions, which must be in the same context as the `eval`.
-  const sum = (refs: number[][]) => refs.flat(2).reduce((acc, item) => acc + item, 0)
+  const sum = (refs: numberMatrix) => refs.flat(2).reduce((acc, item) => acc + item, 0)
   const SUM = sum
-  const count = (refs: number[][]) => refs.flat(2).length
+  const count = (refs: numberMatrix) => refs.flat(2).length
   const COUNT = count
-  const mult = (refs: number[][]) => refs.flat(2).reduce((acc, item) => acc * item, 1)
+  const mult = (refs: numberMatrix) => refs.flat(2).reduce((acc, item) => acc * item, 1)
   const MULT = mult
-  const avg = (refs: number[][]) => SUM(refs) / COUNT(refs)
+  const avg = (refs: numberMatrix) => SUM(refs) / COUNT(refs)
   const AVG = avg
-  const max = (refs: number[][]) => Math.max(...refs.flat(2))
+  const max = (refs: numberMatrix) => Math.max(...refs.flat(2))
   const MAX = max
-  const min = (refs: number[][]) => Math.min(...refs.flat(2))
+  const min = (refs: numberMatrix) => Math.min(...refs.flat(2))
   const MIN = min
-  const cols = (refs: number[][]) => (refs[0] ?? []).length
+  const cols = (refs: numberMatrix) => (refs[0] ?? []).length
   const COLS = cols
-  const rows = (refs: number[][]) => refs.length
+  const rows = (refs: numberMatrix) => refs.length
   const ROWS = rows
 
   return eval(jsFormula)
