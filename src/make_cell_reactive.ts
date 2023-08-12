@@ -1,4 +1,4 @@
-import { refreshSheet, sheetHasExpanded, setFocusedRef, CellInputsType, EffectsType } from './main'
+import { refreshSheet, sheetHasExpanded, setFocusedRef, CellInputsType, EffectsType } from './spreadsheet'
 import { debug, effect } from './signals'
 import {
   RefType,
