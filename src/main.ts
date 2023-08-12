@@ -302,21 +302,20 @@ const sheetData: SheetDataType = generateSpiralSequence(
 const sheet: SheetType = loadSheet(sheetData)
 const sheetCellInputs: CellInputsType = {}
 const cellEffects: EffectsType = {}
-let visibleRows = 0
-let visibleCols = 0
+let visible = { rows: 0, cols: 0 }
 let focusedRef: RefType | null = 'A1'
 
 export const setFocusedRef = (ref: RefType | null) => {
   focusedRef = ref
 }
 
-export const sheetHasExpanded = () => sheet.rows > visibleRows || sheet.cols > visibleCols
+export const sheetHasExpanded = () => sheet.rows > visible.rows || sheet.cols > visible.cols
 
 export const refreshSheet = () => {
   displaySheet(sheet, sheetCellInputs, cellEffects)
 
-  visibleRows = sheet.rows
-  visibleCols = sheet.cols
+  visible.rows = sheet.rows
+  visible.cols = sheet.cols
 }
 
 if (sheetHasExpanded()) refreshSheet()
