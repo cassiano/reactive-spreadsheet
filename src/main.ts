@@ -105,7 +105,9 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
           <a href="#" id="add-row" title="Add row">[+]</a>
         </th>
         ${columnLabels}
-        <th></th>
+        <th>
+          <a href="#" id="add-row-col" title="Add row and column">[+]</a>
+        </th>
       </tr>
     </table>
   `
@@ -143,6 +145,15 @@ const clearPreviousSheetData = (cellInputs: CellInputsType, effects: EffectsType
 
 // ---------------------------------------------------------------------------------------------
 
+const enableRowColAddition = (linkId: string, rowToAdd: number, colToAdd: number) => {
+  document.querySelector<HTMLAnchorElement>(`#${linkId}`)?.addEventListener('click', (e: Event) => {
+    e.preventDefault()
+
+    addCell(sheet, asRef([rowToAdd, colToAdd]), () => 0)
+    refreshSheet()
+  })
+}
+
 const processSheetCells = (sheet: SheetType, cellInputs: CellInputsType, effects: EffectsType) => {
   const refs = expandRange('A1', asRef([sheet.rows, sheet.cols])).flat(2)
 
@@ -157,19 +168,9 @@ const processSheetCells = (sheet: SheetType, cellInputs: CellInputsType, effects
     makeCellNavigable(ref, el, sheet, cellInputs)
   })
 
-  document.querySelector<HTMLAnchorElement>('#add-col')?.addEventListener('click', (e: Event) => {
-    e.preventDefault()
-
-    addCell(sheet, asRef([1, sheet.cols + 1]), () => 0)
-    refreshSheet()
-  })
-
-  document.querySelector<HTMLAnchorElement>('#add-row')?.addEventListener('click', (e: Event) => {
-    e.preventDefault()
-
-    addCell(sheet, asRef([sheet.rows + 1, 1]), () => 0)
-    refreshSheet()
-  })
+  enableRowColAddition('add-col', 1, sheet.cols + 1)
+  enableRowColAddition('add-row', sheet.rows + 1, 1)
+  enableRowColAddition('add-row-col', sheet.rows + 1, sheet.cols + 1)
 }
 
 // ---------------------------------------------------------------------------------------------
