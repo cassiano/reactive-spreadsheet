@@ -134,7 +134,9 @@ const renderSheet = (sheet: SheetType) =>
 const clearPreviousSheetData = (cellInputs: CellInputsType, effects: EffectsType) => {
   // Remove all effect signals as observers of the sheet cells.
   Object.entries(effects).forEach(([ref, effect]) => {
-    sheet.cells[ref].signalWrapper.signal.removeObserver(effect)
+    // Notice that there is no need to remove the subject inside the effect, as it will be deleted
+    // shortly.
+    sheet.cells[ref].signalWrapper.signal.removeObserver(effect, false)
   })
 
   // Delete all effects.
