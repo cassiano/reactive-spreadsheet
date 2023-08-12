@@ -6,7 +6,6 @@ import {
   asRef,
   colAsLabel,
   deleteKeys,
-  expandRange,
   generateSpiralSequence,
   loadSheet,
   repeat,
@@ -65,7 +64,7 @@ const ColumnLabelTHs: FC<ColumnLabelTHsProps> = ({ cols }) => {
 
 const Cell: FC<CellProps> = ({ size, row, col }) => {
   return `
-    <input size="${size}" id='${asRef([row + 1, col + 1])}'/>
+    <input class="cell" size="${size}" id='${asRef([row + 1, col + 1])}'/>
   `
 }
 
@@ -77,7 +76,7 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
   const columnLabels = ColumnLabelTHs({ cols })
 
   return `
-    <table>
+    <table id="sheet">
       <tr>
         <th></th>
         ${columnLabels}
@@ -120,7 +119,7 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
 const displaySheet = (sheet: SheetType, cellInputs: CellInputsType, effects: EffectsType) => {
   renderSheet(sheet)
   clearPreviousSheetData(cellInputs, effects)
-  processSheetCells(sheet, cellInputs, effects)
+  addSheetBehaviors(sheet, cellInputs, effects)
 
   if (focusedRef !== null) cellInputs[focusedRef].click()
 }
@@ -156,11 +155,9 @@ const enableRowColAddition = (linkId: string, rowToAdd: number, colToAdd: number
   })
 }
 
-const processSheetCells = (sheet: SheetType, cellInputs: CellInputsType, effects: EffectsType) => {
-  const refs = expandRange('A1', asRef([sheet.rows, sheet.cols])).flat(2)
-
-  refs.forEach(ref => {
-    cellInputs[ref] = document.querySelector<HTMLInputElement>(`#${ref}`)!
+const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects: EffectsType) => {
+  document.querySelectorAll<HTMLInputElement>('#sheet input.cell').forEach(el => {
+    cellInputs[el.id] = el
   })
 
   Object.entries(cellInputs).forEach(([ref, el]) => {
