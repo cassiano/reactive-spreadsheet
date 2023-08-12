@@ -69,8 +69,10 @@ const Cell: FC<CellProps> = ({ size, row, col }) => {
   `
 }
 
+const FONT_PIXELS_PER_CHAR = 13
+
 const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
-  const size = Math.max(2, window.innerWidth / cols / 15)
+  const size = Math.max(2, window.innerWidth / cols / FONT_PIXELS_PER_CHAR - 1)
 
   const columnLabels = ColumnLabelTHs({ cols })
 
