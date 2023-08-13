@@ -55,7 +55,7 @@ const ColumnLabelTHs: FC<ColumnLabelTHsProps> = ({ cols }) => {
   return repeat(
     cols,
     col => `
-      <th>
+      <th class="header-col-${col + 1}">
         ${colAsLabel(col + 1)}
       </th>
     `
@@ -64,7 +64,7 @@ const ColumnLabelTHs: FC<ColumnLabelTHsProps> = ({ cols }) => {
 
 const Cell: FC<CellProps> = ({ size, row, col }) => {
   return `
-    <input class="cell" size="${size}" id='${asRef([row + 1, col + 1])}'/>
+    <input class="cell" size="${size}" id="${asRef([row + 1, col + 1])}"/>
   `
 }
 
@@ -76,7 +76,7 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
   const columnLabels = ColumnLabelTHs({ cols })
 
   return `
-    <table id="sheet">
+    <table id="sheet" cellpadding="0" cellspacing="0" border="0">
       <tr>
         <th></th>
         ${columnLabels}
@@ -88,7 +88,7 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
         rows,
         row => `
         <tr>
-          <td><bold>${row + 1}</bold></td>
+          <td class="header-row-${row + 1}"><bold>${row + 1}</bold></td>
           ${repeat(
             cols,
             col => `
@@ -97,7 +97,7 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
               </td>
             `
           )}
-          <td><bold>${row + 1}</bold></td>
+          <td class="header-row-${row + 1}"><bold>${row + 1}</bold></td>
         </tr>
       `
       )}
@@ -242,9 +242,9 @@ const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects
 const REVERSED_SEQUENCE_TERMS = 20
 const sheetData: SheetDataType = generateSpiralSequence(
   REVERSED_SEQUENCE_TERMS,
-  'east',
-  'right',
-  [{ A1: '=B1+1' }],
+  'south',
+  'left',
+  [{ A1: '=A2+1' }],
   (_i, _previousRefs, nextRef) => `=${nextRef}+1`
 )
 

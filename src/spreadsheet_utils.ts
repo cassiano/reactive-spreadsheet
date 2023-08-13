@@ -401,4 +401,6 @@ export function generateSpiralSequence(
 
 export const repeat = (count: number, fn: (i: number) => string) => times(count, fn).join('')
 
-export const deleteKeys = (object: { [key: string]: unknown }) => Object.keys(object).forEach(key => delete object[key])
+export const deleteKeys = (object: { [key: string]: unknown }) => {
+  Object.keys(object).forEach(key => delete object[key])
+}
