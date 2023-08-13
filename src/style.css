@@ -95,3 +95,7 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+th.highlighted {
+  background-color: lightBlue;
+}

@@ -13,15 +13,15 @@ import {
 
 let shiftPressed: boolean = false
 
-const setHeaderRowColor = (row: number, color: string) => {
-  document.querySelectorAll<HTMLTableColElement>(`.header-row-${row}`).forEach(td => {
-    td.style.backgroundColor = color
+const highlightHeaderRow = (row: number, highlight: boolean) => {
+  document.querySelectorAll<HTMLTableColElement>(`.header-row-${row}`).forEach(th => {
+    th.classList[highlight ? 'add' : 'remove']('highlighted')
   })
 }
 
-const setHeaderColColor = (col: number, color: string) => {
-  document.querySelectorAll<HTMLTableColElement>(`.header-col-${col}`).forEach(td => {
-    td.style.backgroundColor = color
+const highlightHeaderCol = (col: number, highlight: boolean) => {
+  document.querySelectorAll<HTMLTableColElement>(`.header-col-${col}`).forEach(th => {
+    th.classList[highlight ? 'add' : 'remove']('highlighted')
   })
 }
 
@@ -90,13 +90,13 @@ export const makeCellNavigable = (ref: RefType, el: HTMLInputElement, sheet: She
   el.addEventListener('focus', () => {
     saveFocusedRef(ref)
 
-    setHeaderRowColor(row, 'lightGray')
-    setHeaderColColor(col, 'lightGray')
+    highlightHeaderRow(row, true)
+    highlightHeaderCol(col, true)
   })
 
   el.addEventListener('blur', () => {
-    setHeaderRowColor(row, 'white')
-    setHeaderColColor(col, 'white')
+    highlightHeaderRow(row, false)
+    highlightHeaderCol(col, false)
   })
 }
 

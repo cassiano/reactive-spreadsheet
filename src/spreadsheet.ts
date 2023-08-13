@@ -88,7 +88,7 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
         rows,
         row => `
         <tr>
-          <td class="header-row-${row + 1}"><bold>${row + 1}</bold></td>
+          <th class="header-row-${row + 1}">${row + 1}</th>
           ${repeat(
             cols,
             col => `
@@ -97,7 +97,7 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
               </td>
             `
           )}
-          <td class="header-row-${row + 1}"><bold>${row + 1}</bold></td>
+          <th class="header-row-${row + 1}">${row + 1}</th>
         </tr>
       `
       )}
