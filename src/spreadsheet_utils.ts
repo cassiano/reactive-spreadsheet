@@ -401,43 +401,4 @@ export function generateSpiralSequence(
 
 export const repeat = (count: number, fn: (i: number) => string) => times(count, fn).join('')
 
-export const debounce = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fn: (...args: any[]) => void,
-  timeout: number
-): ((...args: unknown[]) => void) => {
-  let timerId: ReturnType<typeof setTimeout> | null = null
-
-  return (...args: unknown[]): void => {
-    if (timerId !== null) clearTimeout(timerId)
-
-    timerId = setTimeout(() => {
-      fn(...args)
-
-      timerId = null
-    }, timeout)
-  }
-}
-
-export const throttle = (
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fn: (...args: any[]) => void,
-  timeout: number,
-  eagerExecution = false
-): ((...args: unknown[]) => void) => {
-  let timerId: ReturnType<typeof setTimeout> | null = null
-
-  return (...args: unknown[]): void => {
-    if (timerId !== null) return // Return immediately if timer still pending.
-
-    if (eagerExecution) fn(...args)
-
-    timerId = setTimeout(() => {
-      if (!eagerExecution) fn(...args)
-
-      timerId = null
-    }, timeout)
-  }
-}
-
 export const deleteKeys = (object: { [key: string]: unknown }) => Object.keys(object).forEach(key => delete object[key])
