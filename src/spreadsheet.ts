@@ -307,7 +307,7 @@ const cellEffects: EffectsType = {}
 let visible = { rows: 0, cols: 0 }
 let focusedRef: RefType | null = 'A1'
 
-export const setFocusedRef = (ref: RefType | null) => {
+export const saveFocusedRef = (ref: RefType | null) => {
   focusedRef = ref
 }
 

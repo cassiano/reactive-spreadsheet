@@ -1,4 +1,4 @@
-import { refreshSheet, sheetHasExpanded, setFocusedRef, CellInputsType, EffectsType } from './spreadsheet'
+import { refreshSheet, sheetHasExpanded, saveFocusedRef, CellInputsType, EffectsType } from './spreadsheet'
 import { debug, effect } from './signals'
 import {
   RefType,
@@ -38,7 +38,7 @@ export const makeCellNavigable = (ref: RefType, el: HTMLInputElement, sheet: She
       case 'ArrowDown':
         targetRef = asRef([(row % sheet.rows) + 1, row < sheet.rows ? col : (col % sheet.cols) + 1])
 
-        setFocusedRef(targetRef)
+        saveFocusedRef(targetRef)
         setTimeout(() => cellnputs[targetRef!].focus(), 0)
         break
 
@@ -88,7 +88,7 @@ export const makeCellNavigable = (ref: RefType, el: HTMLInputElement, sheet: She
   })
 
   el.addEventListener('focus', () => {
-    setFocusedRef(ref)
+    saveFocusedRef(ref)
 
     setHeaderRowColor(row, 'lightGray')
     setHeaderColColor(col, 'lightGray')
@@ -146,7 +146,7 @@ export const makeCellReactive = (
   el.addEventListener('focus', (e: Event) => {
     const target = e.target as HTMLInputElement
 
-    setFocusedRef(ref)
+    saveFocusedRef(ref)
 
     const sheetRef = sheet.cells[ref]
 
