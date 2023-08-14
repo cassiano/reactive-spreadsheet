@@ -207,11 +207,11 @@ export const makeCellAutoReactive = (
 }
 
 const markCellAsChanged = (el: HTMLInputElement) => {
-  el.style.backgroundColor = 'Yellow'
+  el.classList.add('changed')
 }
 
 const markCellAsUnchanged = (el: HTMLInputElement) => {
-  el.style.backgroundColor = 'White'
+  el.classList.remove('changed')
 }
 
 const resetCellInputColors = (cellInputs: CellInputsType) => {

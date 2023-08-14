@@ -99,3 +99,7 @@ button:focus-visible {
 th.highlighted {
   background-color: lightgray;
 }
+
+input.changed {
+  background-color: yellow;
+}
