@@ -1,8 +1,7 @@
-import { makeCellAutoReactive, makeCellNavigable, makeCellReactive } from './make_cell_reactive'
+import { makeCellAutoReactive, makeCellNavigatable, makeCellReactive } from './make_cell_reactive'
 import {
   SheetDataType,
   SheetType,
-  addCell,
   asRef,
   colAsLabel,
   deleteKeys,
@@ -69,6 +68,7 @@ const Cell: FC<CellProps> = ({ size, row, col }) => {
 }
 
 const FONT_PIXELS_PER_CHAR = 13
+const ROWS_COLS_TO_ADD = 10
 
 const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
   const size = Math.max(2, window.innerWidth / cols / FONT_PIXELS_PER_CHAR - 1)
@@ -81,7 +81,7 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
         <th></th>
         ${columnLabels}
         <th>
-          <a href="#" id="add-col" title="Add column">[+]</a>
+          <a href="#" id="add-col" title="Add ${ROWS_COLS_TO_ADD} column(s)">[+]</a>
         </th>
       </tr>
       ${repeat(
@@ -103,11 +103,11 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
       )}
       <tr>
         <th>
-          <a href="#" id="add-row" title="Add row">[+]</a>
+          <a href="#" id="add-row" title="Add ${ROWS_COLS_TO_ADD} row(s)">[+]</a>
         </th>
         ${columnLabels}
         <th>
-          <a href="#" id="add-row-col" title="Add row and column">[+]</a>
+          <a href="#" id="add-row-col" title="Add ${ROWS_COLS_TO_ADD} row(s) and column(s)">[+]</a>
         </th>
       </tr>
     </table>
@@ -148,11 +148,13 @@ const clearPreviousSheetData = (cellInputs: CellInputsType, effects: EffectsType
 
 // ---------------------------------------------------------------------------------------------
 
-const enableRowColAddition = (linkId: string, rowToAdd: number, colToAdd: number) => {
+const enableRowColAddition = (linkId: string, rowsToAdd: number, colsToAdd: number) => {
   document.querySelector<HTMLAnchorElement>(`#${linkId}`)?.addEventListener('click', (e: Event) => {
     e.preventDefault()
 
-    addCell(sheet, asRef([rowToAdd, colToAdd]), () => 0)
+    sheet.rows += rowsToAdd
+    sheet.cols += colsToAdd
+
     refreshSheet()
   })
 }
@@ -166,12 +168,12 @@ const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects
     if (ref in sheet.cells) makeCellReactive(ref, el, sheet, cellInputs, effects)
     else makeCellAutoReactive(ref, el, sheet, cellInputs, effects)
 
-    makeCellNavigable(ref, el, sheet, cellInputs)
+    makeCellNavigatable(ref, el, sheet, cellInputs)
   })
 
-  enableRowColAddition('add-col', 1, sheet.cols + 1)
-  enableRowColAddition('add-row', sheet.rows + 1, 1)
-  enableRowColAddition('add-row-col', sheet.rows + 1, sheet.cols + 1)
+  enableRowColAddition('add-col', 0, ROWS_COLS_TO_ADD)
+  enableRowColAddition('add-row', ROWS_COLS_TO_ADD, 0)
+  enableRowColAddition('add-row-col', ROWS_COLS_TO_ADD, ROWS_COLS_TO_ADD)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -236,6 +238,16 @@ const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects
 //   'left',
 //   [{ A1: 0 }, { A2: 1 }],
 //   (_i, previousRefs, _nextRef) => `=${previousRefs[previousRefs.length - 2]}+${previousRefs[previousRefs.length - 1]}`
+// )
+
+// Spiral sequence.
+// const SPIRAL_1ST_SEGMENT_SIZE = 40
+// const sheetData: SheetDataType = generateSpiralSequence(
+//   SPIRAL_1ST_SEGMENT_SIZE,
+//   'south',
+//   'left',
+//   [{ A1: 0 }],
+//   (_i, previousRefs, _nextRef) => `=${previousRefs[previousRefs.length - 1]}+1`
 // )
 
 // Reversed spiral sequence.

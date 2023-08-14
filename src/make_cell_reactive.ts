@@ -25,7 +25,13 @@ const highlightHeaderCol = (col: number, highlight: boolean) => {
   })
 }
 
-export const makeCellNavigable = (ref: RefType, el: HTMLInputElement, sheet: SheetType, cellnputs: CellInputsType) => {
+// https://wikidiff.com/navigatable/navigable
+export const makeCellNavigatable = (
+  ref: RefType,
+  el: HTMLInputElement,
+  sheet: SheetType,
+  cellnputs: CellInputsType
+) => {
   const { row, col } = asCoords(ref)
 
   ref = ref.toUpperCase()
@@ -126,7 +132,7 @@ export const makeCellReactive = (
     const target = e.target as HTMLInputElement
     const value = target.value.trim()
 
-    resetCellInputsColors(cellInputs)
+    resetCellInputColors(cellInputs)
 
     if (value.startsWith('=')) updateCellFormula(sheet, ref, value)
     else updateCellValue(sheet, ref, +value)
@@ -185,7 +191,7 @@ export const makeCellAutoReactive = (
 
     if (!(ref in sheet.cells)) addCell(sheet, ref, () => 0)
 
-    resetCellInputsColors(cellInputs)
+    resetCellInputColors(cellInputs)
 
     if (value.startsWith('=')) updateCellFormula(sheet, ref, value)
     else updateCellValue(sheet, ref, +value)
@@ -208,6 +214,6 @@ const markCellAsUnchanged = (el: HTMLInputElement) => {
   el.style.backgroundColor = 'White'
 }
 
-const resetCellInputsColors = (cellInputs: CellInputsType) => {
+const resetCellInputColors = (cellInputs: CellInputsType) => {
   Object.values(cellInputs).forEach(markCellAsUnchanged)
 }
