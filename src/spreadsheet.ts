@@ -241,24 +241,24 @@ const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects
 // )
 
 // Spiral sequence.
-// const SPIRAL_1ST_SEGMENT_SIZE = 20
-// const sheetData: SheetDataType = generateSpiralSequence(
-//   SPIRAL_1ST_SEGMENT_SIZE,
-//   'south',
-//   'left',
-//   [{ A1: 0 }],
-//   (_i, previousRefs, _nextRef) => `=${previousRefs[previousRefs.length - 1]}+1`
-// )
-
-// Reversed spiral sequence.
-const REVERSED_SEQUENCE_TERMS = 20
+const SPIRAL_1ST_SEGMENT_SIZE = 20
 const sheetData: SheetDataType = generateSpiralSequence(
-  REVERSED_SEQUENCE_TERMS,
+  SPIRAL_1ST_SEGMENT_SIZE,
   'south',
   'left',
-  [{ A1: '=A2+1' }],
-  (_i, _previousRefs, nextRef) => `=${nextRef}+1`
+  [{ A1: 0 }],
+  (_i, previousRefs, _nextRef) => `=${previousRefs[previousRefs.length - 1]}+1`
 )
+
+// Reversed spiral sequence.
+// const REVERSED_SEQUENCE_TERMS = 20
+// const sheetData: SheetDataType = generateSpiralSequence(
+//   REVERSED_SEQUENCE_TERMS,
+//   'south',
+//   'left',
+//   [{ A1: '=A2+1' }],
+//   (_i, _previousRefs, nextRef) => `=${nextRef}+1`
+// )
 
 // Cell squares.
 // const sheetData: SheetDataType = generateCellSquares(50, 'A1', 1)
