@@ -107,7 +107,7 @@ export const expandRange = (from: RefType, to: RefType) => {
 type numberMatrix = number[][]
 
 const executeInAgregationFunctionsContext = (sheet: SheetType, jsFormula: string): number => {
-  // Agregation functions, which must be in the same context as the `eval`.
+  // Agregation functions.
   const sum = (refs: numberMatrix) => refs.flat(2).reduce((acc, item) => acc + item, 0)
   const SUM = sum
   const count = (refs: numberMatrix) => refs.flat(2).length
@@ -125,6 +125,12 @@ const executeInAgregationFunctionsContext = (sheet: SheetType, jsFormula: string
   const rows = (refs: numberMatrix) => refs.length
   const ROWS = rows
 
+  const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
+    if (!(ref in sheet.cells)) addCell(sheet, ref, () => 0)
+
+    return sheet.cells[ref].signalWrapper()
+  }
+
   return eval(jsFormula)
 }
 
@@ -139,10 +145,7 @@ export const evaluateFormula = (sheet: SheetType, formula: string) => {
     .replaceAll(/\b([A-Z]+\d+)\b/gi, (_, ref) => {
       ref = ref.toUpperCase()
 
-      return `(
-        !('${ref}' in sheet.cells) && addCell(sheet, '${ref}', () => 0),
-        sheet.cells['${ref}'].signalWrapper()
-      )`
+      return `findOrCreateAndEvaluateCell(sheet, '${ref}')`
     })
 
   return executeInAgregationFunctionsContext(sheet, jsFormula)
