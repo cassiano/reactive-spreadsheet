@@ -125,7 +125,7 @@ const operand = or(ref, integer)
 const exp = and(operand, many(and(operator, operand)))
 const formula = and(equals, exp)
 
-const readOrAddCell = (sheet: SheetType, ref: RefType) => {
+const findOrCreateCell = (sheet: SheetType, ref: RefType) => {
   if (!(ref in sheet.cells)) addCell(sheet, ref, () => 0)
 
   return sheet.cells[ref].signalWrapper()
@@ -134,18 +134,20 @@ const readOrAddCell = (sheet: SheetType, ref: RefType) => {
 export const evaluateFormula = (sheet: SheetType, value: string): number => {
   const match = formula(value.trim())
   if (isError(match) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
+
   const match0 = match[0]
   if (isError(match0)) throw new Error(`Invalid formula ${value}`)
 
   const leftMostOperand = match0[1][0]
   const rest = match0[1][1].flat(2)
 
-  const v1 = typeof leftMostOperand === 'number' ? leftMostOperand : readOrAddCell(sheet, leftMostOperand.toUpperCase())
+  const v1 =
+    typeof leftMostOperand === 'number' ? leftMostOperand : findOrCreateCell(sheet, leftMostOperand.toUpperCase())
 
   const restInChunksOf2 = inChunksOf(rest, 2) as [operator: SingleChar, operand: string | number][]
 
   return restInChunksOf2.reduce((acc, [operator, operand]) => {
-    const v2 = typeof operand === 'number' ? operand : readOrAddCell(sheet, operand.toUpperCase())
+    const v2 = typeof operand === 'number' ? operand : findOrCreateCell(sheet, operand.toUpperCase())
 
     switch (operator) {
       case OPERATIONS.addition:
