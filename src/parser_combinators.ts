@@ -104,10 +104,10 @@ export const operator = or(
   ),
   character(OPERATIONS.exponentiation)
 )
-export const plusSign = character('+')
-export const minusSign = character('+')
-export const sign = or(plusSign, minusSign)
-export const naturalNumber = map(and(optional(plusSign), digits), ([_, digs]) =>
+export const plus = character('+')
+export const minus = character('-')
+export const sign = or(plus, minus)
+export const naturalNumber = map(and(optional(plus), digits), ([_, digs]) =>
   digs.reduce((acc, dig, i) => acc + dig * 10 ** (digs.length - 1 - i), 0)
 )
 export const integer = map(
