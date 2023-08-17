@@ -44,13 +44,13 @@ export const map =
   }
 
 export const manyN =
-  <A>(parser: Parser<A>, n: number = 0): Parser<A[]> =>
+  <A>(parser: Parser<A>, minOccurences: number = 0): Parser<A[]> =>
   input => {
     const [result, rest] = parser(input)
 
-    if (isError(result)) return n > 0 ? [result, input] : [[], input]
+    if (isError(result)) return minOccurences > 0 ? [result, input] : [[], input]
 
-    return map(manyN(parser, n - 1), results => [result, ...results])(rest)
+    return map(manyN(parser, minOccurences - 1), results => [result, ...results])(rest)
   }
 
 export const many = manyN
