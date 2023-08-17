@@ -1,3 +1,4 @@
+import { evaluateFormula } from './parser_combinators'
 import { ComputedSignalKind, IComputedSignalWrapper, computed, times, signalReplacerFn } from './signals'
 
 const ALPHABET_LENGTH = 'Z'.charCodeAt(0) - 'A'.charCodeAt(0) + 1
@@ -104,49 +105,49 @@ export const expandRange = (from: RefType, to: RefType) => {
   )
 }
 
-type numberMatrix = number[][]
+// type numberMatrix = number[][]
 
-const executeInAgregationFunctionsContext = (sheet: SheetType, jsFormula: string): number => {
-  // Agregation functions, which must be in the same context as the `eval`.
-  const sum = (refs: numberMatrix) => refs.flat(2).reduce((acc, item) => acc + item, 0)
-  const SUM = sum
-  const count = (refs: numberMatrix) => refs.flat(2).length
-  const COUNT = count
-  const mult = (refs: numberMatrix) => refs.flat(2).reduce((acc, item) => acc * item, 1)
-  const MULT = mult
-  const avg = (refs: numberMatrix) => SUM(refs) / COUNT(refs)
-  const AVG = avg
-  const max = (refs: numberMatrix) => Math.max(...refs.flat(2))
-  const MAX = max
-  const min = (refs: numberMatrix) => Math.min(...refs.flat(2))
-  const MIN = min
-  const cols = (refs: numberMatrix) => (refs[0] ?? []).length
-  const COLS = cols
-  const rows = (refs: numberMatrix) => refs.length
-  const ROWS = rows
+// const executeInAgregationFunctionsContext = (sheet: SheetType, jsFormula: string): number => {
+//   // Agregation functions, which must be in the same context as the `eval`.
+//   const sum = (refs: numberMatrix) => refs.flat(2).reduce((acc, item) => acc + item, 0)
+//   const SUM = sum
+//   const count = (refs: numberMatrix) => refs.flat(2).length
+//   const COUNT = count
+//   const mult = (refs: numberMatrix) => refs.flat(2).reduce((acc, item) => acc * item, 1)
+//   const MULT = mult
+//   const avg = (refs: numberMatrix) => SUM(refs) / COUNT(refs)
+//   const AVG = avg
+//   const max = (refs: numberMatrix) => Math.max(...refs.flat(2))
+//   const MAX = max
+//   const min = (refs: numberMatrix) => Math.min(...refs.flat(2))
+//   const MIN = min
+//   const cols = (refs: numberMatrix) => (refs[0] ?? []).length
+//   const COLS = cols
+//   const rows = (refs: numberMatrix) => refs.length
+//   const ROWS = rows
 
-  return eval(jsFormula)
-}
+//   return eval(jsFormula)
+// }
 
-export const evaluateFormula = (sheet: SheetType, formula: string) => {
-  const jsFormula = formula
-    .slice(1)
-    // Expand all ranges to 2D matrices of refs.
-    .replace(/\b([A-Z]+\d+):([A-Z]+\d+)\b/gi, (_, from, to) =>
-      JSON.stringify(expandRange(from, to)).replaceAll('"', '')
-    )
-    // Replace all refs by corresponding signal calls.
-    .replaceAll(/\b([A-Z]+\d+)\b/gi, (_, ref) => {
-      ref = ref.toUpperCase()
+// export const evaluateFormula = (sheet: SheetType, formula: string) => {
+//   const jsFormula = formula
+//     .slice(1)
+//     // Expand all ranges to 2D matrices of refs.
+//     .replace(/\b([A-Z]+\d+):([A-Z]+\d+)\b/gi, (_, from, to) =>
+//       JSON.stringify(expandRange(from, to)).replaceAll('"', '')
+//     )
+//     // Replace all refs by corresponding signal calls.
+//     .replaceAll(/\b([A-Z]+\d+)\b/gi, (_, ref) => {
+//       ref = ref.toUpperCase()
 
-      return `(
-        !('${ref}' in sheet.cells) && addCell(sheet, '${ref}', () => 0),
-        sheet.cells['${ref}'].signalWrapper()
-      )`
-    })
+//       return `(
+//         !('${ref}' in sheet.cells) && addCell(sheet, '${ref}', () => 0),
+//         sheet.cells['${ref}'].signalWrapper()
+//       )`
+//     })
 
-  return executeInAgregationFunctionsContext(sheet, jsFormula)
-}
+//   return executeInAgregationFunctionsContext(sheet, jsFormula)
+// }
 
 export const loadSheet = (sheetData: SheetDataType) => {
   const sheet: SheetType = { cells: {}, rows: 0, cols: 0 }

@@ -241,7 +241,7 @@ const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects
 // )
 
 // Spiral sequence.
-// const SPIRAL_1ST_SEGMENT_SIZE = 40
+// const SPIRAL_1ST_SEGMENT_SIZE = 20
 // const sheetData: SheetDataType = generateSpiralSequence(
 //   SPIRAL_1ST_SEGMENT_SIZE,
 //   'south',
@@ -261,7 +261,7 @@ const sheetData: SheetDataType = generateSpiralSequence(
 )
 
 // Cell squares.
-// const sheetData: SheetDataType = generateCellSquares(20, 'A1', 1)
+// const sheetData: SheetDataType = generateCellSquares(50, 'A1', 1)
 
 // Euler calculation.
 // const EULER_TERMS = 18
