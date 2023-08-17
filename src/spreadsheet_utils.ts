@@ -113,10 +113,9 @@ const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
 
 export const evaluateFormula = (sheet: SheetType, value: string): number => {
   const match = formula(value.trim())
-  if (isError(match) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
-
   const match0 = match[0]
-  if (isError(match0)) throw new Error(`Invalid formula ${value}`)
+
+  if (isError(match0) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
 
   const leftMostOperand = match0[1][0]
   const rest = match0[1][1].flat(2)
