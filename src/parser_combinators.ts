@@ -88,6 +88,9 @@ const character = (singleChar: SingleChar) => satisfy(char => char === singleCha
 const letters = many1(letter)
 const digits = many1(digit)
 
+const identifierChar = map(or(or(letter, digit), character('_')), res => res.toString())
+const identifier = concat(many(identifierChar))
+
 const inChunksOf = <T>(collection: T[], size: number): T[][] => {
   const results: T[][] = []
 
