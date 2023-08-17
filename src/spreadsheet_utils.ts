@@ -149,6 +149,15 @@ export const expandRange = (from: RefType, to: RefType) => {
 //   return executeInAgregationFunctionsContext(sheet, jsFormula)
 // }
 
+const upsertCell = (sheet: SheetType, ref: RefType, fn: () => number, formula?: string) => {
+  if (ref in sheet.cells) {
+    sheet.cells[ref].formula = formula
+    sheet.cells[ref].signalWrapper.set(fn)
+  } else {
+    addCell(sheet, ref, fn, formula)
+  }
+}
+
 export const loadSheet = (sheetData: SheetDataType) => {
   const sheet: SheetType = { cells: {}, rows: 0, cols: 0 }
 
@@ -158,20 +167,14 @@ export const loadSheet = (sheetData: SheetDataType) => {
     if (typeof value === 'number') {
       const fn = () => value
 
-      if (ref in sheet.cells) sheet.cells[ref].signalWrapper.set(fn)
-      else addCell(sheet, ref, fn)
+      upsertCell(sheet, ref, fn)
     } else {
       const trimmeValue = value.trim()
 
       if (trimmeValue[0] === '=') {
         const fn = () => evaluateFormula(sheet, trimmeValue)
 
-        if (ref in sheet.cells) {
-          sheet.cells[ref].formula = trimmeValue
-          sheet.cells[ref].signalWrapper.set(fn)
-        } else {
-          addCell(sheet, ref, fn, trimmeValue)
-        }
+        upsertCell(sheet, ref, fn, trimmeValue)
       } else throw new Error(`Invalid formula: '${trimmeValue}' must start with '='`)
     }
   })
