@@ -17,7 +17,7 @@ export const or =
     const [result1, rest1] = parser1(input)
     if (!isError(result1)) return [result1, rest1]
 
-    const [result2, rest2] = parser2(rest1)
+    const [result2, rest2] = parser2(input)
     if (!isError(result2)) return [result2, rest2]
 
     return [error('not p1 nor p2'), input]
@@ -30,7 +30,7 @@ export const and =
     if (isError(result1)) return [result1, input]
 
     const [result2, rest2] = parser2(rest1)
-    if (isError(result2)) return [result2, rest1]
+    if (isError(result2)) return [result2, input]
 
     return [[result1, result2], rest2]
   }
@@ -83,9 +83,9 @@ export const letters = many1(letter)
 export const digits = many1(digit)
 
 export const identifierChar = map(or(or(letter, digit), character('_')), res => res.toString())
-export const identifier = concat(many(identifierChar))
+export const identifier = concat(many1(identifierChar))
 
-export const OPERATIONS = {
+export const OPERATIONS: { [name: string]: SingleChar } = {
   addition: '+',
   subtraction: '-',
   multiplication: '*',
