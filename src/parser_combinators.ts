@@ -96,7 +96,7 @@ export const OPERATIONS: { [name: string]: SingleChar } = {
 export const empty = (input: string): ParserResult<string> => ['', input]
 export const optional = <T>(parser: Parser<T>) => or(parser, empty)
 export const equals = character('=')
-export const ref = map(and(letters, digits), r => r.flat(2).join(''))
+export const ref = map(and(letters, digits), result => result.flat(2).join(''))
 export const operator = or(
   or(
     or(or(character(OPERATIONS.addition), character(OPERATIONS.subtraction)), character(OPERATIONS.multiplication)),
@@ -104,12 +104,24 @@ export const operator = or(
   ),
   character(OPERATIONS.exponentiation)
 )
-export const sign = or(character('+'), character('-'))
-export const integer = map(
-  and(optional(sign), digits),
-  ([signChar, digs]) =>
-    (signChar === '-' ? -1 : +1) * digs.reduce((acc, dig, i) => acc + dig * 10 ** (digs.length - 1 - i), 0)
+export const plusSign = character('+')
+export const minusSign = character('+')
+export const sign = or(plusSign, minusSign)
+export const naturalNumber = map(and(optional(plusSign), digits), ([_, digs]) =>
+  digs.reduce((acc, dig, i) => acc + dig * 10 ** (digs.length - 1 - i), 0)
 )
+export const integer = map(
+  and(optional(sign), naturalNumber),
+  ([signChar, natural]) => (signChar === '-' ? -1 : +1) * natural
+)
+export const naturalNumberGreaterThanZero: Parser<number> = (input: string) => {
+  const [result, rest] = naturalNumber(input)
+
+  if (isError(result)) return [result, input]
+  if (!(result > 0)) return [error(`Number must be > 0, but was ${result}`), input]
+
+  return [result, rest]
+}
 export const operand = or(ref, integer)
 export const exp = and(operand, many(and(operator, operand)))
 export const formula = and(equals, exp)
