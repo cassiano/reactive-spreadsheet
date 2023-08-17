@@ -1,4 +1,4 @@
-import { evaluateFormula } from './parser_combinators'
+import { OPERATIONS, SingleChar, formula, isError } from './parser_combinators'
 import { ComputedSignalKind, IComputedSignalWrapper, computed, times, signalReplacerFn } from './signals'
 
 const ALPHABET_LENGTH = 'Z'.charCodeAt(0) - 'A'.charCodeAt(0) + 1
@@ -105,49 +105,48 @@ export const expandRange = (from: RefType, to: RefType) => {
   )
 }
 
-// type numberMatrix = number[][]
+const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
+  if (!(ref in sheet.cells)) addCell(sheet, ref, () => 0)
 
-// const executeInAgregationFunctionsContext = (sheet: SheetType, jsFormula: string): number => {
-//   // Agregation functions, which must be in the same context as the `eval`.
-//   const sum = (refs: numberMatrix) => refs.flat(2).reduce((acc, item) => acc + item, 0)
-//   const SUM = sum
-//   const count = (refs: numberMatrix) => refs.flat(2).length
-//   const COUNT = count
-//   const mult = (refs: numberMatrix) => refs.flat(2).reduce((acc, item) => acc * item, 1)
-//   const MULT = mult
-//   const avg = (refs: numberMatrix) => SUM(refs) / COUNT(refs)
-//   const AVG = avg
-//   const max = (refs: numberMatrix) => Math.max(...refs.flat(2))
-//   const MAX = max
-//   const min = (refs: numberMatrix) => Math.min(...refs.flat(2))
-//   const MIN = min
-//   const cols = (refs: numberMatrix) => (refs[0] ?? []).length
-//   const COLS = cols
-//   const rows = (refs: numberMatrix) => refs.length
-//   const ROWS = rows
+  return sheet.cells[ref].signalWrapper()
+}
 
-//   return eval(jsFormula)
-// }
+export const evaluateFormula = (sheet: SheetType, value: string): number => {
+  const match = formula(value.trim())
+  if (isError(match) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
 
-// export const evaluateFormula = (sheet: SheetType, formula: string) => {
-//   const jsFormula = formula
-//     .slice(1)
-//     // Expand all ranges to 2D matrices of refs.
-//     .replace(/\b([A-Z]+\d+):([A-Z]+\d+)\b/gi, (_, from, to) =>
-//       JSON.stringify(expandRange(from, to)).replaceAll('"', '')
-//     )
-//     // Replace all refs by corresponding signal calls.
-//     .replaceAll(/\b([A-Z]+\d+)\b/gi, (_, ref) => {
-//       ref = ref.toUpperCase()
+  const match0 = match[0]
+  if (isError(match0)) throw new Error(`Invalid formula ${value}`)
 
-//       return `(
-//         !('${ref}' in sheet.cells) && addCell(sheet, '${ref}', () => 0),
-//         sheet.cells['${ref}'].signalWrapper()
-//       )`
-//     })
+  const leftMostOperand = match0[1][0]
+  const rest = match0[1][1].flat(2)
 
-//   return executeInAgregationFunctionsContext(sheet, jsFormula)
-// }
+  const v1 =
+    typeof leftMostOperand === 'number'
+      ? leftMostOperand
+      : findOrCreateAndEvaluateCell(sheet, leftMostOperand.toUpperCase())
+
+  const restInChunksOf2 = inChunksOf(rest, 2) as [operator: SingleChar, operand: string | number][]
+
+  return restInChunksOf2.reduce((acc, [operator, operand]) => {
+    const v2 = typeof operand === 'number' ? operand : findOrCreateAndEvaluateCell(sheet, operand.toUpperCase())
+
+    switch (operator) {
+      case OPERATIONS.addition:
+        return acc + v2
+      case OPERATIONS.subtraction:
+        return acc - v2
+      case OPERATIONS.multiplication:
+        return acc * v2
+      case OPERATIONS.division:
+        return acc / v2
+      case OPERATIONS.exponentiation:
+        return acc ** v2
+      default:
+        throw new Error(`Invalid operator ${operator}`)
+    }
+  }, v1)
+}
 
 const upsertCell = (sheet: SheetType, ref: RefType, fn: () => number, formula?: string) => {
   if (ref in sheet.cells) {
@@ -407,4 +406,12 @@ export const repeat = (count: number, fn: (i: number) => string) => times(count,
 
 export const deleteKeys = (object: { [key: string]: unknown }) => {
   Object.keys(object).forEach(key => delete object[key])
+}
+
+export const inChunksOf = <T>(collection: T[], size: number): T[][] => {
+  const results: T[][] = []
+
+  for (let i = 0; i < collection.length; i += size) results.push(collection.slice(i, i + size))
+
+  return results
 }

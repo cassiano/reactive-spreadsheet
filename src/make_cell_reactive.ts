@@ -1,7 +1,15 @@
 import { refreshSheet, sheetHasExpanded, saveFocusedRef, CellInputsType, EffectsType } from './spreadsheet'
 import { debug, effect } from './signals'
-import { RefType, SheetType, asCoords, asRef, addCell, updateCellFormula, updateCellValue } from './spreadsheet_utils'
-import { evaluateFormula } from './parser_combinators'
+import {
+  RefType,
+  SheetType,
+  asCoords,
+  asRef,
+  addCell,
+  updateCellFormula,
+  updateCellValue,
+  evaluateFormula,
+} from './spreadsheet_utils'
 
 let shiftPressed: boolean = false
 

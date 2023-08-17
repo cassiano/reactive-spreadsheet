@@ -1,23 +1,17 @@
-////////////////////////
-// Parser combinators //
-////////////////////////
+export const error = (msg: string) => new Error(msg)
 
-import { RefType, SheetType, addCell } from './spreadsheet_utils'
+export type ParserResult<T> = [resultOrError: T | Error, rest: string]
+export type Parser<T> = (input: string) => ParserResult<T>
+export type SingleChar = string
 
-const error = (msg: string) => new Error(msg)
+export const isError = <T>(result: T | Error): result is Error => result instanceof Error
 
-type ParserResult<T> = [resultOrError: T | Error, rest: string]
-type Parser<T> = (input: string) => ParserResult<T>
-type SingleChar = string
-
-const isError = <T>(result: T | Error): result is Error => result instanceof Error
-
-const satisfy =
+export const satisfy =
   (matchFn: (char: SingleChar) => boolean): Parser<string> =>
   input =>
     input.length > 0 && matchFn(input[0]) ? [input[0], input.slice(1)] : [error('no match'), input]
 
-const or =
+export const or =
   <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<A | B> =>
   input => {
     const [result1, rest1] = parser1(input)
@@ -29,7 +23,7 @@ const or =
     return [error('not p1 nor p2'), input]
   }
 
-const and =
+export const and =
   <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A, B]> =>
   input => {
     const [result1, rest1] = parser1(input)
@@ -41,7 +35,7 @@ const and =
     return [[result1, result2], rest2]
   }
 
-const map =
+export const map =
   <A, B>(parser: Parser<A>, fn: (value: A) => B): Parser<B> =>
   input => {
     const [result, rest] = parser(input)
@@ -49,7 +43,7 @@ const map =
     return isError(result) ? [result, input] : [fn(result), rest]
   }
 
-const manyN =
+export const manyN =
   <A>(parser: Parser<A>, n: number = 0): Parser<A[]> =>
   input => {
     const [result, rest] = parser(input)
@@ -59,12 +53,12 @@ const manyN =
     return map(manyN(parser, n - 1), results => [result, ...results])(rest)
   }
 
-const many = manyN
-const many0 = many
-const many1 = <A>(parser: Parser<A>): Parser<A[]> => manyN(parser, 1)
-const many2 = <A>(parser: Parser<A>): Parser<A[]> => manyN(parser, 2)
+export const many = manyN
+export const many0 = many
+export const many1 = <A>(parser: Parser<A>): Parser<A[]> => manyN(parser, 1)
+export const many2 = <A>(parser: Parser<A>): Parser<A[]> => manyN(parser, 2)
 
-const sequence =
+export const sequence =
   <A, B>(parser: Parser<A>, fn: (value: A) => Parser<B>): Parser<B> =>
   input => {
     const [result, rest] = parser(input)
@@ -73,33 +67,25 @@ const sequence =
   }
 
 // Equivalent to and().
-const tuple = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A, B]> =>
+export const tuple = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A, B]> =>
   sequence(parser1, r1 => map(parser2, r2 => [r1, r2]))
 
-const concat = (parser: Parser<string[]>): Parser<string> => map(parser, chars => chars.join(''))
+export const concat = (parser: Parser<string[]>): Parser<string> => map(parser, chars => chars.join(''))
 
-const letter = satisfy(char => /[a-z]/i.test(char))
-const digit = map(
+export const letter = satisfy(char => /[a-z]/i.test(char))
+export const digit = map(
   satisfy(char => /\d/.test(char)),
   digit => +digit
 )
-const character = (singleChar: SingleChar) => satisfy(char => char === singleChar)
+export const character = (singleChar: SingleChar) => satisfy(char => char === singleChar)
 
-const letters = many1(letter)
-const digits = many1(digit)
+export const letters = many1(letter)
+export const digits = many1(digit)
 
-const identifierChar = map(or(or(letter, digit), character('_')), res => res.toString())
-const identifier = concat(many(identifierChar))
+export const identifierChar = map(or(or(letter, digit), character('_')), res => res.toString())
+export const identifier = concat(many(identifierChar))
 
-const inChunksOf = <T>(collection: T[], size: number): T[][] => {
-  const results: T[][] = []
-
-  for (let i = 0; i < collection.length; i += size) results.push(collection.slice(i, i + size))
-
-  return results
-}
-
-const OPERATIONS = {
+export const OPERATIONS = {
   addition: '+',
   subtraction: '-',
   multiplication: '*',
@@ -107,66 +93,23 @@ const OPERATIONS = {
   exponentiation: '^',
 }
 
-const empty = (input: string): ParserResult<string> => ['', input]
-const optional = <T>(parser: Parser<T>) => or(parser, empty)
-const equals = character('=')
-const ref = map(and(letters, digits), r => r.flat(2).join(''))
-const operator = or(
+export const empty = (input: string): ParserResult<string> => ['', input]
+export const optional = <T>(parser: Parser<T>) => or(parser, empty)
+export const equals = character('=')
+export const ref = map(and(letters, digits), r => r.flat(2).join(''))
+export const operator = or(
   or(
     or(or(character(OPERATIONS.addition), character(OPERATIONS.subtraction)), character(OPERATIONS.multiplication)),
     character(OPERATIONS.division)
   ),
   character(OPERATIONS.exponentiation)
 )
-const sign = or(character('+'), character('-'))
-const integer = map(
+export const sign = or(character('+'), character('-'))
+export const integer = map(
   and(optional(sign), digits),
   ([signChar, digs]) =>
     (signChar === '-' ? -1 : +1) * digs.reduce((acc, dig, i) => acc + dig * 10 ** (digs.length - 1 - i), 0)
 )
-const operand = or(ref, integer)
-const exp = and(operand, many(and(operator, operand)))
-const formula = and(equals, exp)
-
-const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
-  if (!(ref in sheet.cells)) addCell(sheet, ref, () => 0)
-
-  return sheet.cells[ref].signalWrapper()
-}
-
-export const evaluateFormula = (sheet: SheetType, value: string): number => {
-  const match = formula(value.trim())
-  if (isError(match) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
-
-  const match0 = match[0]
-  if (isError(match0)) throw new Error(`Invalid formula ${value}`)
-
-  const leftMostOperand = match0[1][0]
-  const rest = match0[1][1].flat(2)
-
-  const v1 =
-    typeof leftMostOperand === 'number'
-      ? leftMostOperand
-      : findOrCreateAndEvaluateCell(sheet, leftMostOperand.toUpperCase())
-
-  const restInChunksOf2 = inChunksOf(rest, 2) as [operator: SingleChar, operand: string | number][]
-
-  return restInChunksOf2.reduce((acc, [operator, operand]) => {
-    const v2 = typeof operand === 'number' ? operand : findOrCreateAndEvaluateCell(sheet, operand.toUpperCase())
-
-    switch (operator) {
-      case OPERATIONS.addition:
-        return acc + v2
-      case OPERATIONS.subtraction:
-        return acc - v2
-      case OPERATIONS.multiplication:
-        return acc * v2
-      case OPERATIONS.division:
-        return acc / v2
-      case OPERATIONS.exponentiation:
-        return acc ** v2
-      default:
-        throw new Error(`Invalid operator ${operator}`)
-    }
-  }, v1)
-}
+export const operand = or(ref, integer)
+export const exp = and(operand, many(and(operator, operand)))
+export const formula = and(equals, exp)
