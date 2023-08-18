@@ -22,6 +22,64 @@ export const or =
 
     return [error('not p1 nor p2'), input]
   }
+const or2 = or
+export const or3 =
+  <A, B, C>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>): Parser<A | B | C> =>
+  input => {
+    const [result1, rest1] = parser1(input)
+    if (!isError(result1)) return [result1, rest1]
+
+    const [result2, rest2] = parser2(input)
+    if (!isError(result2)) return [result2, rest2]
+
+    const [result3, rest3] = parser3(input)
+    if (!isError(result3)) return [result3, rest3]
+
+    return [error('not p1 nor p2 nor p3'), input]
+  }
+export const or4 =
+  <A, B, C, D>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>, parser4: Parser<D>): Parser<A | B | C | D> =>
+  input => {
+    const [result1, rest1] = parser1(input)
+    if (!isError(result1)) return [result1, rest1]
+
+    const [result2, rest2] = parser2(input)
+    if (!isError(result2)) return [result2, rest2]
+
+    const [result3, rest3] = parser3(input)
+    if (!isError(result3)) return [result3, rest3]
+
+    const [result4, rest4] = parser4(input)
+    if (!isError(result4)) return [result4, rest3]
+
+    return [error('not p1 nor p2 nor p3 nor p4'), input]
+  }
+export const or5 =
+  <A, B, C, D, E>(
+    parser1: Parser<A>,
+    parser2: Parser<B>,
+    parser3: Parser<C>,
+    parser4: Parser<D>,
+    parser5: Parser<E>
+  ): Parser<A | B | C | D | E> =>
+  input => {
+    const [result1, rest1] = parser1(input)
+    if (!isError(result1)) return [result1, rest1]
+
+    const [result2, rest2] = parser2(input)
+    if (!isError(result2)) return [result2, rest2]
+
+    const [result3, rest3] = parser3(input)
+    if (!isError(result3)) return [result3, rest3]
+
+    const [result4, rest4] = parser4(input)
+    if (!isError(result4)) return [result4, rest4]
+
+    const [result5, rest5] = parser5(input)
+    if (!isError(result5)) return [result5, rest5]
+
+    return [error('not p1 nor p2 nor p3 nor p4 nor p5'), input]
+  }
 
 export const and =
   <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A, B]> =>
@@ -33,6 +91,64 @@ export const and =
     if (isError(result2)) return [result2, input]
 
     return [[result1, result2], rest2]
+  }
+const and2 = and
+export const and3 =
+  <A, B, C>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>): Parser<[A, B, C]> =>
+  input => {
+    const [result1, rest1] = parser1(input)
+    if (isError(result1)) return [result1, input]
+
+    const [result2, rest2] = parser2(rest1)
+    if (isError(result2)) return [result2, input]
+
+    const [result3, rest3] = parser3(rest2)
+    if (isError(result3)) return [result3, input]
+
+    return [[result1, result2, result3], rest3]
+  }
+export const and4 =
+  <A, B, C, D>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>, parser4: Parser<D>): Parser<[A, B, C, D]> =>
+  input => {
+    const [result1, rest1] = parser1(input)
+    if (isError(result1)) return [result1, input]
+
+    const [result2, rest2] = parser2(rest1)
+    if (isError(result2)) return [result2, input]
+
+    const [result3, rest3] = parser3(rest2)
+    if (isError(result3)) return [result3, input]
+
+    const [result4, rest4] = parser4(rest3)
+    if (isError(result4)) return [result4, input]
+
+    return [[result1, result2, result3, result4], rest4]
+  }
+export const and5 =
+  <A, B, C, D, E>(
+    parser1: Parser<A>,
+    parser2: Parser<B>,
+    parser3: Parser<C>,
+    parser4: Parser<D>,
+    parser5: Parser<E>
+  ): Parser<[A, B, C, D, E]> =>
+  input => {
+    const [result1, rest1] = parser1(input)
+    if (isError(result1)) return [result1, input]
+
+    const [result2, rest2] = parser2(rest1)
+    if (isError(result2)) return [result2, input]
+
+    const [result3, rest3] = parser3(rest2)
+    if (isError(result3)) return [result3, input]
+
+    const [result4, rest4] = parser4(rest3)
+    if (isError(result4)) return [result4, input]
+
+    const [result5, rest5] = parser5(rest4)
+    if (isError(result5)) return [result5, input]
+
+    return [[result1, result2, result3, result4, result5], rest5]
   }
 
 export const map =
@@ -82,7 +198,7 @@ export const character = (singleChar: SingleChar) => satisfy(char => char === si
 export const letters = many1(letter)
 export const digits = many1(digit)
 
-export const identifierChar = map(or(or(letter, digit), character('_')), res => res.toString())
+export const identifierChar = map(or3(letter, digit, character('_')), res => res.toString())
 export const identifier = concat(many1(identifierChar))
 
 export const OPERATIONS: { [name: string]: SingleChar } = {
@@ -93,28 +209,28 @@ export const OPERATIONS: { [name: string]: SingleChar } = {
   exponentiation: '^',
 }
 
-export const empty = (input: string): ParserResult<string> => ['', input]
+export const empty: Parser<string> = input => ['', input]
 export const optional = <T>(parser: Parser<T>) => or(parser, empty)
 export const equals = character('=')
 export const ref = map(and(letters, digits), result => result.flat(2).join(''))
-export const operator = or(
-  or(
-    or(or(character(OPERATIONS.addition), character(OPERATIONS.subtraction)), character(OPERATIONS.multiplication)),
-    character(OPERATIONS.division)
-  ),
+export const operator = or5(
+  character(OPERATIONS.addition),
+  character(OPERATIONS.subtraction),
+  character(OPERATIONS.multiplication),
+  character(OPERATIONS.division),
   character(OPERATIONS.exponentiation)
 )
 export const plus = character('+')
 export const minus = character('-')
 export const sign = or(plus, minus)
 export const naturalNumber = map(and(optional(plus), digits), ([_, digs]) =>
-  digs.reduce((acc, dig, i) => acc + dig * 10 ** (digs.length - 1 - i), 0)
+  digs.reduce((acc, dig, i) => acc + dig * 10 ** (digs.length - (i + 1)), 0)
 )
 export const integer = map(
   and(optional(sign), naturalNumber),
   ([signChar, natural]) => (signChar === '-' ? -1 : +1) * natural
 )
-export const naturalNumberGreaterThanZero: Parser<number> = (input: string) => {
+export const naturalNumberGreaterThanZero: Parser<number> = input => {
   const [result, rest] = naturalNumber(input)
 
   if (isError(result)) return [result, input]
@@ -122,6 +238,15 @@ export const naturalNumberGreaterThanZero: Parser<number> = (input: string) => {
 
   return [result, rest]
 }
-export const operand = or(ref, integer)
+export const period = character('.')
+export const float = map(
+  and3(integer, period, digits),
+  ([int, _, digs]) => int + Math.sign(int) * digs.reduce((acc, dig, i) => acc + dig / 10 ** (i + 1), 0)
+)
+export const numeric = or(float, integer)
+export const operand = or(ref, numeric)
 export const exp = and(operand, many(and(operator, operand)))
-export const formula = and(equals, exp)
+export const formula = map(
+  and(equals, exp),
+  ([_, [leftOperand, operatorsAndRightOperands]]) => [leftOperand, operatorsAndRightOperands] as const
+)

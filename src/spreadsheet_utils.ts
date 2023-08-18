@@ -1,4 +1,4 @@
-import { OPERATIONS, SingleChar, formula, isError } from './parser_combinators'
+import { OPERATIONS, formula, isError } from './parser_combinators'
 import { ComputedSignalKind, IComputedSignalWrapper, computed, times, signalReplacerFn } from './signals'
 
 const ALPHABET_LENGTH = 'Z'.charCodeAt(0) - 'A'.charCodeAt(0) + 1
@@ -117,18 +117,17 @@ export const evaluateFormula = (sheet: SheetType, value: string): number => {
 
   if (isError(match0) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
 
-  const leftMostOperand = match0[1][0]
-  const rest = match0[1][1].flat(2)
+  const leftMostOperand = match0[0]
+  const operatorsAndRightOperands = match0[1]
 
   const v1 =
     typeof leftMostOperand === 'number'
       ? leftMostOperand
       : findOrCreateAndEvaluateCell(sheet, leftMostOperand.toUpperCase())
 
-  const restInChunksOf2 = inChunksOf(rest, 2) as [operator: SingleChar, operand: string | number][]
-
-  return restInChunksOf2.reduce((acc, [operator, operand]) => {
-    const v2 = typeof operand === 'number' ? operand : findOrCreateAndEvaluateCell(sheet, operand.toUpperCase())
+  return operatorsAndRightOperands.reduce((acc, [operator, rightOperand]) => {
+    const v2 =
+      typeof rightOperand === 'number' ? rightOperand : findOrCreateAndEvaluateCell(sheet, rightOperand.toUpperCase())
 
     switch (operator) {
       case OPERATIONS.addition:
