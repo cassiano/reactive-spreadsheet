@@ -20,7 +20,7 @@ export const or =
     const [result2, rest2] = parser2(input)
     if (!isError(result2)) return [result2, rest2]
 
-    return [error('not p1 nor p2'), input]
+    return [error('(or) neither p1 nor p2 satisfied'), input]
   }
 export const or2 = or
 export const or3 =
@@ -35,7 +35,7 @@ export const or3 =
     const [result3, rest3] = parser3(input)
     if (!isError(result3)) return [result3, rest3]
 
-    return [error('not p1 nor p2 nor p3'), input]
+    return [error('(or) none of p1...p3 satisfied'), input]
   }
 export const or4 =
   <A, B, C, D>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>, parser4: Parser<D>): Parser<A | B | C | D> =>
@@ -52,7 +52,7 @@ export const or4 =
     const [result4, rest4] = parser4(input)
     if (!isError(result4)) return [result4, rest3]
 
-    return [error('not p1 nor p2 nor p3 nor p4'), input]
+    return [error('(or) none of p1...p4 satisfied'), input]
   }
 export const or5 =
   <A, B, C, D, E>(
@@ -78,7 +78,7 @@ export const or5 =
     const [result5, rest5] = parser5(input)
     if (!isError(result5)) return [result5, rest5]
 
-    return [error('not p1 nor p2 nor p3 nor p4 nor p5'), input]
+    return [error('(or) none of p1...p5 satisfied'), input]
   }
 
 export const and =
@@ -242,6 +242,9 @@ export const float = map(
 export const numeric = or(float, integer)
 export const operand = or(ref, numeric)
 export const exp = and(operand, many(and(operator, operand)))
-export const preceeded = <T>(char: SingleChar, parser: Parser<T>): Parser<T> =>
-  map(and(character(char), parser), ([_, result]) => result)
-export const formula = preceeded('=', exp)
+export const preceededBy = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<B> =>
+  map(and(parser1, parser2), ([_, result2]) => result2)
+export const succeededBy = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<A> =>
+  map(and(parser1, parser2), ([result1, _]) => result1)
+export const equals = character('=')
+export const formula = preceededBy(equals, exp)
