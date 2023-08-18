@@ -50,7 +50,7 @@ export const or4 =
     if (!isError(result3)) return [result3, rest3]
 
     const [result4, rest4] = parser4(input)
-    if (!isError(result4)) return [result4, rest3]
+    if (!isError(result4)) return [result4, rest4]
 
     return [error('(or) none of p1...p4 satisfied'), input]
   }
