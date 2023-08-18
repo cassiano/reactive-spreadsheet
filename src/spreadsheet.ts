@@ -78,7 +78,7 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
   return `
     <table id="sheet" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <th></th>
+        <th />
         ${columnLabels}
         <th>
           <a href="#" id="add-col" title="Add ${ROWS_COLS_TO_ADD} column(s)">[+]</a>

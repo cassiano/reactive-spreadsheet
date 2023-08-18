@@ -22,7 +22,7 @@ export const or =
 
     return [error('not p1 nor p2'), input]
   }
-const or2 = or
+export const or2 = or
 export const or3 =
   <A, B, C>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>): Parser<A | B | C> =>
   input => {
@@ -92,7 +92,7 @@ export const and =
 
     return [[result1, result2], rest2]
   }
-const and2 = and
+export const and2 = and
 export const and3 =
   <A, B, C>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>): Parser<[A, B, C]> =>
   input => {
@@ -184,7 +184,7 @@ export const sequence =
 
 // Equivalent to and().
 export const tuple = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A, B]> =>
-  sequence(parser1, r1 => map(parser2, r2 => [r1, r2]))
+  sequence(parser1, result1 => map(parser2, result2 => [result1, result2]))
 
 export const concat = (parser: Parser<string[]>): Parser<string> => map(parser, chars => chars.join(''))
 
@@ -211,7 +211,6 @@ export const OPERATIONS: { [name: string]: SingleChar } = {
 
 export const empty: Parser<string> = input => ['', input]
 export const optional = <T>(parser: Parser<T>) => or(parser, empty)
-export const equals = character('=')
 export const ref = map(and(letters, digits), result => result.flat(2).join(''))
 export const operator = or5(
   character(OPERATIONS.addition),
@@ -223,15 +222,12 @@ export const operator = or5(
 export const plus = character('+')
 export const minus = character('-')
 export const sign = or(plus, minus)
-export const naturalNumber = map(and(optional(plus), digits), ([_, digs]) =>
+export const natural = map(and(optional(plus), digits), ([_, digs]) =>
   digs.reduce((acc, dig, i) => acc + dig * 10 ** (digs.length - (i + 1)), 0)
 )
-export const integer = map(
-  and(optional(sign), naturalNumber),
-  ([signChar, natural]) => (signChar === '-' ? -1 : +1) * natural
-)
-export const naturalNumberGreaterThanZero: Parser<number> = input => {
-  const [result, rest] = naturalNumber(input)
+export const integer = map(and(optional(sign), natural), ([signChar, nat]) => (signChar === '-' ? -1 : +1) * nat)
+export const naturalGreaterThanZero: Parser<number> = input => {
+  const [result, rest] = natural(input)
 
   if (isError(result)) return [result, input]
   if (!(result > 0)) return [error(`Number must be > 0, but was ${result}`), input]
@@ -240,13 +236,12 @@ export const naturalNumberGreaterThanZero: Parser<number> = input => {
 }
 export const period = character('.')
 export const float = map(
-  and3(integer, period, digits),
-  ([int, _, digs]) => int + Math.sign(int) * digs.reduce((acc, dig, i) => acc + dig / 10 ** (i + 1), 0)
+  and3(integer, period, natural),
+  ([int, _, nat]) => int + (Math.sign(int) * nat) / 10 ** Math.trunc(Math.log10(nat) + 1)
 )
 export const numeric = or(float, integer)
 export const operand = or(ref, numeric)
 export const exp = and(operand, many(and(operator, operand)))
-export const formula = map(
-  and(equals, exp),
-  ([_, [leftOperand, operatorsAndRightOperands]]) => [leftOperand, operatorsAndRightOperands] as const
-)
+export const preceeded = <T>(char: SingleChar, parser: Parser<T>): Parser<T> =>
+  map(and(character(char), parser), ([_, result]) => result)
+export const formula = preceeded('=', exp)
