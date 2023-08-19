@@ -101,6 +101,9 @@ export const precededBy = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser
 export const succeededBy = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<A> =>
   map(and(parser1, parser2), ([result1, _]) => result1)
 
+const delimitedBy = <A, B, C>(parserBefore: Parser<A>, parser: Parser<B>, parserAfter: Parser<C>): Parser<B> =>
+  precededBy(parserBefore, succeededBy(parser, parserAfter))
+
 export const letter = satisfy(char => /[a-z]/i.test(char))
 
 export const digit = map(
