@@ -11,6 +11,14 @@ export const satisfy =
   input =>
     input.length > 0 && matchFn(input[0]) ? [input[0], input.slice(1)] : [error('no match'), input]
 
+export const map =
+  <A, B>(parser: Parser<A>, fn: (value: A) => B): Parser<B> =>
+  input => {
+    const [result, rest] = parser(input)
+
+    return isError(result) ? [result, input] : [fn(result), rest]
+  }
+
 export const sequence =
   <A, B>(parser: Parser<A>, fn: (value: A) => Parser<B>): Parser<B> =>
   input => {
@@ -69,14 +77,6 @@ export const and5 = <A, B, C, D, E>(
   parser5: Parser<E>
 ): Parser<[A, B, C, D, E]> =>
   map(and(parser1, and4(parser2, parser3, parser4, parser5)), ([result1, results]) => [result1, ...results])
-
-export const map =
-  <A, B>(parser: Parser<A>, fn: (value: A) => B): Parser<B> =>
-  input => {
-    const [result, rest] = parser(input)
-
-    return isError(result) ? [result, input] : [fn(result), rest]
-  }
 
 export const manyN =
   <A>(parser: Parser<A>, minOccurences: number = 0): Parser<A[]> =>
