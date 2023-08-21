@@ -1,4 +1,4 @@
-import { OPERATIONS, formula, isError } from './parser_combinators'
+import { ExpressionType, formula, isError } from './parser_combinators'
 import { ComputedSignalKind, IComputedSignalWrapper, computed, times, signalReplacerFn } from './signals'
 
 const ALPHABET_LENGTH = 'Z'.charCodeAt(0) - 'A'.charCodeAt(0) + 1
@@ -111,39 +111,44 @@ const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
   return sheet.cells[ref].signalWrapper()
 }
 
-export const evaluateFormula = (sheet: SheetType, value: string): number => {
-  const match = formula(value.trim())
-  const match0 = match[0]
+const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
+  if (typeof expr === 'number')
+    // Plain number
+    return expr
+  else if (typeof expr === 'string')
+    // Ref
+    return findOrCreateAndEvaluateCell(sheet, expr.toUpperCase())
+  else if (Array.isArray(expr)) {
+    // [ExpressionType, OperatorType, ExpressionType]
+    const [leftExpr, operator, rightExpr] = expr
 
-  if (isError(match0) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
-
-  const leftMostOperand = match0[0]
-  const operatorsAndRightOperands = match0[1]
-
-  const v1 =
-    typeof leftMostOperand === 'number'
-      ? leftMostOperand
-      : findOrCreateAndEvaluateCell(sheet, leftMostOperand.toUpperCase())
-
-  return operatorsAndRightOperands.reduce((acc, [operator, rightOperand]) => {
-    const v2 =
-      typeof rightOperand === 'number' ? rightOperand : findOrCreateAndEvaluateCell(sheet, rightOperand.toUpperCase())
+    const leftOperand = evaluateExpression(sheet, leftExpr)
+    const rightOperand = evaluateExpression(sheet, rightExpr)
 
     switch (operator) {
-      case OPERATIONS.addition:
-        return acc + v2
-      case OPERATIONS.subtraction:
-        return acc - v2
-      case OPERATIONS.multiplication:
-        return acc * v2
-      case OPERATIONS.division:
-        return acc / v2
-      case OPERATIONS.exponentiation:
-        return acc ** v2
-      default:
+      case '+':
+        return leftOperand + rightOperand
+      case '-':
+        return leftOperand - rightOperand
+      case '*':
+        return leftOperand * rightOperand
+      case '/':
+        return leftOperand / rightOperand
+      default: {
+        const _exhaustiveCheck: never = operator
         throw new Error(`Invalid operator ${operator}`)
+      }
     }
-  }, v1)
+  } else throw new Error(`Invalid type '${typeof expr}' for expression '${expr}'`)
+}
+
+export const evaluateFormula = (sheet: SheetType, value: string): number => {
+  const match = formula(value.trim())
+  const expression = match[0]
+
+  if (isError(expression) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
+
+  return evaluateExpression(sheet, expression)
 }
 
 const upsertCell = (sheet: SheetType, ref: RefType, fn: () => number, formula?: string) => {

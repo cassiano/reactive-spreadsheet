@@ -1,17 +1,18 @@
-export const error = (msg: string) => new Error(msg)
+const error = (msg: string) => new Error(msg)
 
-export type ParserResult<T> = [resultOrError: T | Error, rest: string]
-export type Parser<T> = (input: string) => ParserResult<T>
-export type SingleChar = string
+type ParserResult<T> = [resultOrError: T | Error, rest: string]
+type Parser<T> = (input: string) => ParserResult<T>
+type SingleChar = string
+type EmptyString = ''
 
 export const isError = <T>(result: T | Error): result is Error => result instanceof Error
 
-export const satisfy =
+const satisfy =
   (matchFn: (char: SingleChar) => boolean): Parser<string> =>
   input =>
     input.length > 0 && matchFn(input[0]) ? [input[0], input.slice(1)] : [error('no match'), input]
 
-export const map =
+const map =
   <A, B>(parser: Parser<A>, fn: (value: A) => B): Parser<B> =>
   input => {
     const [result, rest] = parser(input)
@@ -19,7 +20,7 @@ export const map =
     return isError(result) ? [result, input] : [fn(result), rest]
   }
 
-export const sequence =
+const sequence =
   <A, B>(parser: Parser<A>, fn: (value: A) => Parser<B>): Parser<B> =>
   input => {
     const [result, rest] = parser(input)
@@ -27,26 +28,26 @@ export const sequence =
     return isError(result) ? [result, input] : fn(result)(rest)
   }
 
-export const or =
+const or =
   <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<A | B> =>
   input => {
     const [result1, rest1] = parser1(input)
 
     return !isError(result1) ? [result1, rest1] : parser2(input)
   }
-export const or2 = or
+const or2 = or
 
-export const or3 = <A, B, C>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>): Parser<A | B | C> =>
+const or3 = <A, B, C>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>): Parser<A | B | C> =>
   or(parser1, or2(parser2, parser3))
 
-export const or4 = <A, B, C, D>(
+const or4 = <A, B, C, D>(
   parser1: Parser<A>,
   parser2: Parser<B>,
   parser3: Parser<C>,
   parser4: Parser<D>
 ): Parser<A | B | C | D> => or(parser1, or3(parser2, parser3, parser4))
 
-export const or5 = <A, B, C, D, E>(
+const or5 = <A, B, C, D, E>(
   parser1: Parser<A>,
   parser2: Parser<B>,
   parser3: Parser<C>,
@@ -54,14 +55,14 @@ export const or5 = <A, B, C, D, E>(
   parser5: Parser<E>
 ): Parser<A | B | C | D | E> => or(parser1, or4(parser2, parser3, parser4, parser5))
 
-export const and = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A, B]> =>
+const and = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A, B]> =>
   sequence(parser1, result1 => map(parser2, result2 => [result1, result2]))
-export const and2 = and
+const and2 = and
 
-export const and3 = <A, B, C>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>): Parser<[A, B, C]> =>
+const and3 = <A, B, C>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>): Parser<[A, B, C]> =>
   map(and(parser1, and2(parser2, parser3)), ([result1, results]) => [result1, ...results])
 
-export const and4 = <A, B, C, D>(
+const and4 = <A, B, C, D>(
   parser1: Parser<A>,
   parser2: Parser<B>,
   parser3: Parser<C>,
@@ -69,7 +70,7 @@ export const and4 = <A, B, C, D>(
 ): Parser<[A, B, C, D]> =>
   map(and(parser1, and3(parser2, parser3, parser4)), ([result1, results]) => [result1, ...results])
 
-export const and5 = <A, B, C, D, E>(
+const and5 = <A, B, C, D, E>(
   parser1: Parser<A>,
   parser2: Parser<B>,
   parser3: Parser<C>,
@@ -78,81 +79,110 @@ export const and5 = <A, B, C, D, E>(
 ): Parser<[A, B, C, D, E]> =>
   map(and(parser1, and4(parser2, parser3, parser4, parser5)), ([result1, results]) => [result1, ...results])
 
-export const manyN =
-  <A>(parser: Parser<A>, minOccurences: number = 0): Parser<A[]> =>
+type ManyOccurencesType = { minOccurences?: number; maxOccurences?: number }
+
+const manyN =
+  <A>(parser: Parser<A>, { minOccurences = 0, maxOccurences = Infinity }: ManyOccurencesType = {}): Parser<A[]> =>
   input => {
     const [result, rest] = parser(input)
 
     if (isError(result)) return minOccurences > 0 ? [result, input] : [[], input]
+    if (maxOccurences === 0) return [[], input]
 
-    return map(manyN(parser, minOccurences - 1), results => [result, ...results])(rest)
+    return map(manyN(parser, { minOccurences: minOccurences - 1, maxOccurences: maxOccurences - 1 }), results => [
+      result,
+      ...results,
+    ])(rest)
   }
 
-export const many = manyN
-export const many0 = many
-export const many1 = <A>(parser: Parser<A>): Parser<A[]> => manyN(parser, 1)
-export const many2 = <A>(parser: Parser<A>): Parser<A[]> => manyN(parser, 2)
+const many = manyN
+const many0 = many
+const many1 = <A>(parser: Parser<A>, { maxOccurences = Infinity }: ManyOccurencesType = {}): Parser<A[]> =>
+  manyN(parser, { minOccurences: 1, maxOccurences })
+const many2 = <A>(parser: Parser<A>, { maxOccurences = Infinity }: ManyOccurencesType = {}): Parser<A[]> =>
+  manyN(parser, { minOccurences: 2, maxOccurences })
 
-export const concat = (parser: Parser<string[]>): Parser<string> => map(parser, chars => chars.join(''))
+const empty: Parser<EmptyString> = input => ['', input]
 
-export const precededBy = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<B> =>
-  map(and(parser1, parser2), ([_, result2]) => result2)
+const optional = <T>(parser: Parser<T>): Parser<EmptyString | T> => or(parser, empty)
+// const optional = <T>(parser: Parser<T>): Parser<EmptyString | T> =>
+//   map(many(parser, { maxOccurences: 1 }), results => (results.length === 0 ? '' : results[0]))
 
-export const succeededBy = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<A> =>
-  map(and(parser1, parser2), ([result1, _]) => result1)
+const concat = (parser: Parser<string[]>): Parser<string> => map(parser, chars => chars.join(''))
+
+const precededBy = <A, B>(parserBefore: Parser<A>, parser: Parser<B>): Parser<B> =>
+  map(and(parserBefore, parser), ([_, result]) => result)
+
+const succeededBy = <A, B>(parser: Parser<A>, parserAfter: Parser<B>): Parser<A> =>
+  map(and(parser, parserAfter), ([result, _]) => result)
 
 const delimitedBy = <A, B, C>(parserBefore: Parser<A>, parser: Parser<B>, parserAfter: Parser<C>): Parser<B> =>
   precededBy(parserBefore, succeededBy(parser, parserAfter))
 
-export const letter = satisfy(char => /[a-z]/i.test(char))
+const char = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c === singleChar)
+const allButChar = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c !== singleChar)
+const anyChar = (): Parser<SingleChar> => satisfy(_ => true)
 
-export const digit = map(
-  satisfy(char => /\d/.test(char)),
+const word =
+  (w: string): Parser<string> =>
+  (input: string) =>
+    input.startsWith(w) ? [w, input.slice(w.length)] : [error('no match'), input]
+
+// const letter = satisfy(char => /[a-z]/i.test(char))
+const letter = satisfy(char => char.toUpperCase() >= 'A' && char.toUpperCase() <= 'Z')
+const letters = many1(letter)
+
+// Decimal.
+const digit = map(
+  // satisfy(char => /\d/.test(char)),
+  satisfy(char => char >= '0' && char <= '9'),
   digit => +digit
 )
+const digits = many1(digit)
 
-export const character = (singleChar: SingleChar) => satisfy(char => char === singleChar)
+// Hexadecimal.
+const hexDigit: Parser<SingleChar> = satisfy(
+  char => (char >= '0' && char <= '9') || (char.toUpperCase() >= 'A' && char.toUpperCase() <= 'F')
+)
+const hexDigits = many1(hexDigit)
+// const hexNumber = map(and3(char('0'), char('x'), hexDigits), ([_0, _x, digs]) => digs.join(''))
+const hexNumber = concat(precededBy(word('0x'), hexDigits))
 
-export const letters = many1(letter)
+const DOUBLE_QUOTE = '"'
+const SINGLE_QUOTE = "'"
+const BACK_TICK = '`'
 
-export const digits = many1(digit)
+const doubleQuote = char(DOUBLE_QUOTE)
+const singleQuote = char(SINGLE_QUOTE)
+const backTick = char(BACK_TICK)
+const underscore = char('_')
+const plus = char('+')
+const minus = char('-')
+const period = char('.')
+const equals = char('=')
 
-export const identifierChar = map(or3(letter, digit, character('_')), res => res.toString())
-export const identifier = concat(many1(identifierChar))
-
-export const OPERATIONS: { [name: string]: SingleChar } = {
-  addition: '+',
-  subtraction: '-',
-  multiplication: '*',
-  division: '/',
-  exponentiation: '^',
-}
-
-export const empty: Parser<string> = input => ['', input]
-
-export const optional = <T>(parser: Parser<T>) => or(parser, empty)
-
-export const ref = map(and(letters, digits), result => result.flat(2).join(''))
-
-export const operator = or5(
-  character(OPERATIONS.addition),
-  character(OPERATIONS.subtraction),
-  character(OPERATIONS.multiplication),
-  character(OPERATIONS.division),
-  character(OPERATIONS.exponentiation)
+const string = concat(
+  or3(
+    precededBy(doubleQuote, succeededBy(many(allButChar(DOUBLE_QUOTE)), doubleQuote)),
+    precededBy(singleQuote, succeededBy(many(allButChar(SINGLE_QUOTE)), singleQuote)),
+    precededBy(backTick, succeededBy(many(allButChar(BACK_TICK)), backTick))
+  )
 )
 
-export const plus = character('+')
-export const minus = character('-')
-export const sign = or(plus, minus)
+const identifierChar = map(or3(letter, digit, underscore), res => res.toString())
+const identifier = concat(many1(identifierChar))
 
-export const natural = map(precededBy(optional(plus), digits), digs =>
+const ref = map(and(letters, digits), result => result.flat(2).join(''))
+
+const sign = or(plus, minus)
+
+const natural = map(precededBy(optional(plus), digits), digs =>
   digs.reduce((acc, dig, i) => acc + dig * 10 ** (digs.length - (i + 1)), 0)
 )
 
-export const integer = map(and(optional(sign), natural), ([signChar, nat]) => (signChar === '-' ? -1 : +1) * nat)
+const integer = map(and(optional(sign), natural), ([signChar, nat]) => (signChar === '-' ? -1 : +1) * nat)
 
-export const naturalGreaterThanZero: Parser<number> = input => {
+const naturalGreaterThanZero: Parser<number> = input => {
   const [result, rest] = natural(input)
 
   if (isError(result)) return [result, input]
@@ -161,19 +191,58 @@ export const naturalGreaterThanZero: Parser<number> = input => {
   return [result, rest]
 }
 
-export const period = character('.')
-
-export const float = map(
+const float = map(
   and(integer, precededBy(period, natural)),
   ([int, nat]) => int + (nat === 0 ? 0 : (Math.sign(int) * nat) / 10 ** Math.trunc(Math.log10(nat) + 1))
 )
 
-export const numeric = or(float, integer)
+const numeric = or(float, integer)
 
-export const operand = or(ref, numeric)
+const times = char('*')
+const dividedBy = char('/')
+const openParens = char('(')
+const closeParens = char(')')
 
-export const exp = and(operand, many(and(operator, operand)))
+export type OperatorType = '+' | '-' | '*' | '/'
+export type ExpressionType = (string | number) | [ExpressionType, OperatorType, ExpressionType]
 
-export const equals = character('=')
+// const expression: Parser<ExpressionType> = (input: string) => or(and3(term, or(plus, minus), expression), term)(input)
+// const term: Parser<ExpressionType> = (input: string) => or(and3(factor, or(times, dividedBy), term), factor)(input)
+// const factor = or(operand, succeededBy(precededBy(openParens, expression), closeParens))
 
-export const formula = precededBy(equals, exp)
+const operand = or(
+  numeric,
+  map(and(optional(sign), ref), ([signChar, reference]) => (signChar === '-' ? [-1, '*', reference] : reference))
+)
+
+const expression: Parser<ExpressionType> = (input: string) => {
+  const [result, rest] = or(and3(term, or(plus, minus), expression), term)(input)
+
+  if (isError(result)) return [result, input]
+
+  // Replace `a - b` by `a + (-b)`.
+  if (Array.isArray(result) && result[1] === '-' && Array.isArray(result[2]) && ['+', '-'].indexOf(result[2][1]) >= 0) {
+    result[1] = '+'
+    result[2][0] = [-1, '*', result[2][0]]
+  }
+
+  return [result, rest]
+}
+
+const term: Parser<ExpressionType> = (input: string) => {
+  const [result, rest] = or(and3(factor, or(times, dividedBy), term), factor)(input)
+
+  if (isError(result)) return [result, input]
+
+  // Replace `a / b` by `a * (1 / b)`.
+  if (Array.isArray(result) && result[1] === '/' && Array.isArray(result[2]) && ['*', '/'].indexOf(result[2][1]) >= 0) {
+    result[1] = '*'
+    result[2][0] = [1, '/', result[2][0]]
+  }
+
+  return [result, rest]
+}
+
+const factor = or(operand, succeededBy(precededBy(openParens, expression), closeParens))
+
+export const formula = precededBy(equals, expression)
