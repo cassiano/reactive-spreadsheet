@@ -203,12 +203,20 @@ const dividedBy = char('/')
 const openParens = char('(')
 const closeParens = char(')')
 
-export type OperatorType = '+' | '-' | '*' | '/'
+// export type OperatorType = '+' | '-' | '*' | '/'
+export enum OperatorType {
+  Addition = '+',
+  Subtraction = '-',
+  Multiplication = '*',
+  Division = '/',
+}
 export type ExpressionType =
   | (string | number)
   | [ExpressionType, OperatorType, ExpressionType]
   | ['(', ExpressionType, ')']
 
+// https://stackoverflow.com/questions/2969561/how-to-parse-mathematical-expressions-involving-parentheses
+//
 // const expression: Parser<ExpressionType> = (input: string) => or(and3(term, or(plus, minus), expression), term)(input)
 // const term: Parser<ExpressionType> = (input: string) => or(and3(factor, or(times, dividedBy), term), factor)(input)
 // const factor = or(operand, succeededBy(precededBy(openParens, expression), closeParens))
@@ -216,10 +224,12 @@ export type ExpressionType =
 
 const operand = or(
   numeric,
-  map(and(optional(sign), ref), ([signChar, reference]) => (signChar === '-' ? [-1, '*', reference] : reference))
+  map(and(optional(sign), ref), ([signChar, reference]) =>
+    signChar === '-' ? [-1, OperatorType.Multiplication, reference] : reference
+  )
 )
 
-const expression: Parser<ExpressionType> = (input: string) => {
+const expression: any = (input: string) => {
   const [result, rest] = or(and3(term, or(plus, minus), expression), term)(input)
 
   if (isError(result)) return [result, input]
@@ -232,17 +242,20 @@ const expression: Parser<ExpressionType> = (input: string) => {
   // 4) '-' is NOT commutative (i.e. a - b ≠ b - a)
   //
   // replace `a - b` by `a + (-b)`.
-  if (Array.isArray(result) && result[1] === '-' && Array.isArray(result[2])) {
-    result[1] = '+'
+  if (Array.isArray(result) && result[1] === OperatorType.Subtraction && Array.isArray(result[2])) {
+    result[1] = OperatorType.Addition
 
-    if (result[2][0] === '(' && result[2][2] === ')') result[2] = [-1, '*', result[2][1]]
-    else result[2][0] = [-1, '*', result[2][0]]
+    if (result[2][0] === '(' && result[2][2] === ')') {
+      result[2] = [-1, OperatorType.Multiplication, result[2][1]]
+    } else {
+      result[2][0] = [-1, OperatorType.Multiplication, result[2][0]]
+    }
   }
 
   return [result, rest]
 }
 
-const term: Parser<ExpressionType> = (input: string) => {
+const term: any = (input: string) => {
   const [result, rest] = or(and3(factor, or(times, dividedBy), term), factor)(input)
 
   if (isError(result)) return [result, input]
@@ -255,11 +268,14 @@ const term: Parser<ExpressionType> = (input: string) => {
   // 4) '/' is NOT commutative (i.e. a / b ≠ b / a)
   //
   // replace `a / b` by `a * (1 / b)`.
-  if (Array.isArray(result) && result[1] === '/' && Array.isArray(result[2])) {
-    result[1] = '*'
+  if (Array.isArray(result) && result[1] === OperatorType.Division && Array.isArray(result[2])) {
+    result[1] = OperatorType.Multiplication
 
-    if (result[2][0] === '(' && result[2][2] === ')') result[2] = [1, '/', result[2][1]]
-    else result[2][0] = [1, '/', result[2][0]]
+    if (result[2][0] === '(' && result[2][2] === ')') {
+      result[2] = [1, OperatorType.Division, result[2][1]]
+    } else {
+      result[2][0] = [1, OperatorType.Division, result[2][0]]
+    }
   }
 
   return [result, rest]

@@ -1,4 +1,4 @@
-import { ExpressionType, formula, isError } from './parser_combinators'
+import { ExpressionType, OperatorType, formula, isError } from './parser_combinators'
 import { ComputedSignalKind, IComputedSignalWrapper, computed, times, signalReplacerFn } from './signals'
 
 const ALPHABET_LENGTH = 'Z'.charCodeAt(0) - 'A'.charCodeAt(0) + 1
@@ -120,7 +120,7 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
     return findOrCreateAndEvaluateCell(sheet, expr.toUpperCase())
   else if (Array.isArray(expr)) {
     // [ExpressionType, OperatorType, ExpressionType] | ['(', ExpressionType, ')']
-    const [left, middle, right] = expr
+    const [left, middle, right] = expr // Should be typed as [ExpressionType | '(', OperatorType | ExpressionType, ExpressionType | ')']
 
     if (left === '(' && right === ')') return evaluateExpression(sheet, middle)
 
@@ -128,13 +128,13 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
     const rightOperand = evaluateExpression(sheet, right)
 
     switch (middle) {
-      case '+':
+      case OperatorType.Addition:
         return leftOperand + rightOperand
-      case '-':
+      case OperatorType.Subtraction:
         return leftOperand - rightOperand
-      case '*':
+      case OperatorType.Multiplication:
         return leftOperand * rightOperand
-      case '/':
+      case OperatorType.Division:
         return leftOperand / rightOperand
       default: {
         // const _exhaustiveCheck: never = middle
@@ -146,7 +146,7 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
 
 export const evaluateFormula = (sheet: SheetType, value: string): number => {
   const match = formula(value.trim())
-  const expression = match[0]
+  const expression = match[0] as ExpressionType
 
   if (isError(expression) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
 
