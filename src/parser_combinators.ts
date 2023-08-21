@@ -204,7 +204,10 @@ const openParens = char('(')
 const closeParens = char(')')
 
 export type OperatorType = '+' | '-' | '*' | '/'
-export type ExpressionType = (string | number) | [ExpressionType, OperatorType, ExpressionType]
+export type ExpressionType =
+  | (string | number)
+  | [ExpressionType, OperatorType, ExpressionType]
+  | ['(', ExpressionType, ')']
 
 // const expression: Parser<ExpressionType> = (input: string) => or(and3(term, or(plus, minus), expression), term)(input)
 // const term: Parser<ExpressionType> = (input: string) => or(and3(factor, or(times, dividedBy), term), factor)(input)
@@ -221,7 +224,7 @@ const expression: Parser<ExpressionType> = (input: string) => {
   if (isError(result)) return [result, input]
 
   // Replace `a - b` by `a + (-b)`.
-  if (Array.isArray(result) && result[1] === '-' && Array.isArray(result[2]) && ['+', '-'].indexOf(result[2][1]) >= 0) {
+  if (Array.isArray(result) && result[1] === '-' && Array.isArray(result[2])) {
     result[1] = '+'
     result[2][0] = [-1, '*', result[2][0]]
   }
@@ -234,8 +237,13 @@ const term: Parser<ExpressionType> = (input: string) => {
 
   if (isError(result)) return [result, input]
 
-  // Replace `a / b` by `a * (1 / b)`.
-  if (Array.isArray(result) && result[1] === '/' && Array.isArray(result[2]) && ['*', '/'].indexOf(result[2][1]) >= 0) {
+  // Replace `a / b` by `a * (1 / b)`, but only if `b` is not a parenthesised expression.
+  if (
+    Array.isArray(result) &&
+    result[1] === '/' &&
+    Array.isArray(result[2]) &&
+    !(result[2][0] === '(' && result[2][2] === ')')
+  ) {
     result[1] = '*'
     result[2][0] = [1, '/', result[2][0]]
   }
@@ -243,6 +251,6 @@ const term: Parser<ExpressionType> = (input: string) => {
   return [result, rest]
 }
 
-const factor = or(operand, succeededBy(precededBy(openParens, expression), closeParens))
+const factor = or(operand, and3(openParens, expression, closeParens))
 
 export const formula = precededBy(equals, expression)

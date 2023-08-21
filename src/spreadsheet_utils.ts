@@ -119,13 +119,15 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
     // Ref
     return findOrCreateAndEvaluateCell(sheet, expr.toUpperCase())
   else if (Array.isArray(expr)) {
-    // [ExpressionType, OperatorType, ExpressionType]
-    const [leftExpr, operator, rightExpr] = expr
+    // [ExpressionType, OperatorType, ExpressionType] | ['(', ExpressionType, ')']
+    const [left, middle, right] = expr
 
-    const leftOperand = evaluateExpression(sheet, leftExpr)
-    const rightOperand = evaluateExpression(sheet, rightExpr)
+    if (left === '(' && right === ')') return evaluateExpression(sheet, middle)
 
-    switch (operator) {
+    const leftOperand = evaluateExpression(sheet, left)
+    const rightOperand = evaluateExpression(sheet, right)
+
+    switch (middle) {
       case '+':
         return leftOperand + rightOperand
       case '-':
@@ -135,8 +137,8 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
       case '/':
         return leftOperand / rightOperand
       default: {
-        const _exhaustiveCheck: never = operator
-        throw new Error(`Invalid operator ${operator}`)
+        // const _exhaustiveCheck: never = middle
+        throw new Error(`Invalid operator ${middle}`)
       }
     }
   } else throw new Error(`Invalid type '${typeof expr}' for expression '${expr}'`)
