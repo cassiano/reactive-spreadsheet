@@ -212,6 +212,7 @@ export type ExpressionType =
 // const expression: Parser<ExpressionType> = (input: string) => or(and3(term, or(plus, minus), expression), term)(input)
 // const term: Parser<ExpressionType> = (input: string) => or(and3(factor, or(times, dividedBy), term), factor)(input)
 // const factor = or(operand, succeededBy(precededBy(openParens, expression), closeParens))
+// const factor = or(operand, and3(openParens, expression, closeParens))
 
 const operand = or(
   numeric,
@@ -223,15 +224,19 @@ const expression: Parser<ExpressionType> = (input: string) => {
 
   if (isError(result)) return [result, input]
 
-  // Replace `a - b` by `a + (-b)`, but only if `b` is not a parenthesised expression.
-  if (
-    Array.isArray(result) &&
-    result[1] === '-' &&
-    Array.isArray(result[2]) &&
-    !(result[2][0] === '(' && result[2][2] === ')')
-  ) {
+  // Given that:
+  //
+  // 1) our parser will effectively evaluate from right to left
+  // 2) '+' and '-' are both left associative (i.e. evaluated from left to right)
+  // 3) '+' is commutative (i.e. a + b = b + a)
+  // 4) '-' is NOT commutative (i.e. a - b ≠ b - a)
+  //
+  // replace `a - b` by `a + (-b)`.
+  if (Array.isArray(result) && result[1] === '-' && Array.isArray(result[2])) {
     result[1] = '+'
-    result[2][0] = [-1, '*', result[2][0]]
+
+    if (result[2][0] === '(' && result[2][2] === ')') result[2] = [-1, '*', result[2][1]]
+    else result[2][0] = [-1, '*', result[2][0]]
   }
 
   return [result, rest]
@@ -242,15 +247,19 @@ const term: Parser<ExpressionType> = (input: string) => {
 
   if (isError(result)) return [result, input]
 
-  // Replace `a / b` by `a * (1 / b)`, but only if `b` is not a parenthesised expression.
-  if (
-    Array.isArray(result) &&
-    result[1] === '/' &&
-    Array.isArray(result[2]) &&
-    !(result[2][0] === '(' && result[2][2] === ')')
-  ) {
+  // Given that:
+  //
+  // 1) our parser will effectively evaluate from right to left
+  // 2) '*' and '/' are both left associative (i.e. evaluated from left to right)
+  // 3) '*' is commutative (i.e. a * b = b * a)
+  // 4) '/' is NOT commutative (i.e. a / b ≠ b / a)
+  //
+  // replace `a / b` by `a * (1 / b)`.
+  if (Array.isArray(result) && result[1] === '/' && Array.isArray(result[2])) {
     result[1] = '*'
-    result[2][0] = [1, '/', result[2][0]]
+
+    if (result[2][0] === '(' && result[2][2] === ')') result[2] = [1, '/', result[2][1]]
+    else result[2][0] = [1, '/', result[2][0]]
   }
 
   return [result, rest]
