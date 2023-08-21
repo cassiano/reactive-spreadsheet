@@ -223,8 +223,13 @@ const expression: Parser<ExpressionType> = (input: string) => {
 
   if (isError(result)) return [result, input]
 
-  // Replace `a - b` by `a + (-b)`.
-  if (Array.isArray(result) && result[1] === '-' && Array.isArray(result[2])) {
+  // Replace `a - b` by `a + (-b)`, but only if `b` is not a parenthesised expression.
+  if (
+    Array.isArray(result) &&
+    result[1] === '-' &&
+    Array.isArray(result[2]) &&
+    !(result[2][0] === '(' && result[2][2] === ')')
+  ) {
     result[1] = '+'
     result[2][0] = [-1, '*', result[2][0]]
   }
