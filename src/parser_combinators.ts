@@ -8,7 +8,7 @@ type EmptyString = ''
 export const isError = <T>(result: T | Error): result is Error => result instanceof Error
 
 const satisfy =
-  (matchFn: (char: SingleChar) => boolean): Parser<string> =>
+  (matchFn: (char: SingleChar) => boolean): Parser<SingleChar> =>
   input =>
     input.length > 0 && matchFn(input[0]) ? [input[0], input.slice(1)] : [error('no match'), input]
 
@@ -33,7 +33,7 @@ const or =
   input => {
     const [result1, rest1] = parser1(input)
 
-    return !isError(result1) ? [result1, rest1] : parser2(input)
+    return isError(result1) ? parser2(input) : [result1, rest1]
   }
 const or2 = or
 
@@ -84,10 +84,16 @@ type ManyOccurencesType = { minOccurences?: number; maxOccurences?: number }
 const manyN =
   <A>(parser: Parser<A>, { minOccurences = 0, maxOccurences = Infinity }: ManyOccurencesType = {}): Parser<A[]> =>
   input => {
+    if (maxOccurences === 0) return [[], input]
+
     const [result, rest] = parser(input)
 
     if (isError(result)) return minOccurences > 0 ? [result, input] : [[], input]
-    if (maxOccurences === 0) return [[], input]
+
+    // minOccurences--
+    // maxOccurences--
+
+    // return map(manyN(parser, { minOccurences, maxOccurences }), results => [result, ...results])(rest)
 
     return map(manyN(parser, { minOccurences: minOccurences - 1, maxOccurences: maxOccurences - 1 }), results => [
       result,
@@ -97,15 +103,17 @@ const manyN =
 
 const many = manyN
 const many0 = many
+
 const many1 = <A>(parser: Parser<A>, { maxOccurences = Infinity }: ManyOccurencesType = {}): Parser<A[]> =>
   manyN(parser, { minOccurences: 1, maxOccurences })
+
 const many2 = <A>(parser: Parser<A>, { maxOccurences = Infinity }: ManyOccurencesType = {}): Parser<A[]> =>
   manyN(parser, { minOccurences: 2, maxOccurences })
 
 const empty: Parser<EmptyString> = input => ['', input]
 
-const optional = <T>(parser: Parser<T>): Parser<EmptyString | T> => or(parser, empty)
-// const optional = <T>(parser: Parser<T>): Parser<EmptyString | T> =>
+const optional = <A>(parser: Parser<A>): Parser<A | EmptyString> => or(parser, empty)
+// const optional = <A>(parser: Parser<A>): Parser<A | EmptyString> =>
 //   map(many(parser, { maxOccurences: 1 }), results => (results.length === 0 ? '' : results[0]))
 
 const concat = (parser: Parser<string[]>): Parser<string> => map(parser, chars => chars.join(''))
