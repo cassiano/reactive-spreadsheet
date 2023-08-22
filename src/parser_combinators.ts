@@ -202,15 +202,22 @@ export const ADDITION = '+'
 export const SUBTRACTION = '-'
 export const MULTIPLICATION = '*'
 export const DIVISION = '/'
+export const EXPONENTIATION = '^'
 
 const addedTo = char(ADDITION)
 const subtractedFrom = char(SUBTRACTION)
 const multipliedBy = char(MULTIPLICATION)
 const dividedBy = char(DIVISION)
+const toThePowerOf = char(EXPONENTIATION)
 const openParens = char('(')
 const closeParens = char(')')
 
-export type OperatorType = typeof ADDITION | typeof SUBTRACTION | typeof MULTIPLICATION | typeof DIVISION
+export type OperatorType =
+  | typeof ADDITION
+  | typeof SUBTRACTION
+  | typeof MULTIPLICATION
+  | typeof DIVISION
+  | typeof EXPONENTIATION
 export type ExpressionType =
   | (string | number)
   | [ExpressionType, OperatorType, ExpressionType]
@@ -218,10 +225,10 @@ export type ExpressionType =
 
 // https://stackoverflow.com/questions/2969561/how-to-parse-mathematical-expressions-involving-parentheses
 //
-// const expression: Parser<ExpressionType> = (input: string) => or(and3(term, or(plus, minus), expression), term)(input)
-// const term: Parser<ExpressionType> = (input: string) => or(and3(factor, or(times, dividedBy), term), factor)(input)
+// const expression: Parser<ExpressionType> = input => or(and3(term1, or(plus, minus), expression), term1)(input)
+// const term1: Parser<ExpressionType> = input => or(and3(term2, or(times, dividedBy), term1), term2)(input)
+// const term2: Parser<ExpressionType> = input => or(and3(factor, toThePowerOf, term1), factor)(input)
 // const factor = or(operand, succeededBy(precededBy(openParens, expression), closeParens))
-// const factor = or(operand, and3(openParens, expression, closeParens))
 
 const operand = or(
   numeric,
@@ -232,8 +239,8 @@ const operand = or(
 
 const expression: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    and3(term, or(addedTo, subtractedFrom), expression),
-    term
+    and3(term1, or(addedTo, subtractedFrom), expression),
+    term1
   )(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
@@ -259,10 +266,10 @@ const expression: Parser<ExpressionType> = input => {
   return [result, rest]
 }
 
-const term: Parser<ExpressionType> = input => {
+const term1: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    and3(factor, or(multipliedBy, dividedBy), term),
-    factor
+    and3(term2, or(multipliedBy, dividedBy), term1),
+    term2
   )(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
@@ -287,6 +294,8 @@ const term: Parser<ExpressionType> = input => {
 
   return [result, rest]
 }
+
+const term2 = (input: string) => or(and3(factor, toThePowerOf, term1), factor)(input)
 
 const factor = or(operand, and3(openParens, expression, closeParens))
 
