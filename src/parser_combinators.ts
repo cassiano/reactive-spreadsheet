@@ -90,11 +90,6 @@ const manyN =
 
     if (isError(result)) return minOccurences > 0 ? [result, input] : [[], input]
 
-    // minOccurences--
-    // maxOccurences--
-
-    // return map(manyN(parser, { minOccurences, maxOccurences }), results => [result, ...results])(rest)
-
     return map(manyN(parser, { minOccurences: minOccurences - 1, maxOccurences: maxOccurences - 1 }), results => [
       result,
       ...results,
