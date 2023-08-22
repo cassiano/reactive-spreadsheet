@@ -248,10 +248,10 @@ const optionallySigned = <A>(parser: Parser<A>) =>
 
 const operand = or(numeric, optionallySigned(ref))
 
-const additionSubtractionTerm: Parser<ExpressionType> = input => {
+const additiveTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    and3(multiplicationDivisionTerm, or(addedTo, subtractedFrom), additionSubtractionTerm),
-    multiplicationDivisionTerm
+    and3(multiplicativeTerm, or(addedTo, subtractedFrom), additiveTerm),
+    multiplicativeTerm
   )(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
@@ -277,10 +277,10 @@ const additionSubtractionTerm: Parser<ExpressionType> = input => {
   return [result, rest]
 }
 
-const multiplicationDivisionTerm: Parser<ExpressionType> = input => {
+const multiplicativeTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    and3(exponentiationTerm, or(multipliedBy, dividedBy), multiplicationDivisionTerm),
-    exponentiationTerm
+    and3(exponentialTerm, or(multipliedBy, dividedBy), multiplicativeTerm),
+    exponentialTerm
   )(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
@@ -306,19 +306,16 @@ const multiplicationDivisionTerm: Parser<ExpressionType> = input => {
   return [result, rest]
 }
 
-const exponentiationTerm: Parser<ExpressionType> = input => {
-  const [result, rest] = or(
-    and3(factor, toThePowerOf, exponentiationTerm),
-    factor
-  )(input) as ParserResult<ExpressionType>
+const exponentialTerm: Parser<ExpressionType> = input => {
+  const [result, rest] = or(and3(factor, toThePowerOf, exponentialTerm), factor)(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
 
   return [result, rest]
 }
 
-const factor = or(operand, optionallySigned(and3(openParens, additionSubtractionTerm, closeParens)))
+const factor = or(operand, optionallySigned(and3(openParens, additiveTerm, closeParens)))
 
-const expression = additionSubtractionTerm
+const expression = additiveTerm
 
 export const formula = precededBy(equals, expression)
