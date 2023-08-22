@@ -227,7 +227,7 @@ export type ExpressionType =
 //
 // const expression: Parser<ExpressionType> = input => or(and3(term1, or(plus, minus), expression), term1)(input)
 // const term1: Parser<ExpressionType> = input => or(and3(term2, or(times, dividedBy), term1), term2)(input)
-// const term2: Parser<ExpressionType> = input => or(and3(factor, toThePowerOf, term1), factor)(input)
+// const term2: Parser<ExpressionType> = input => or(and3(factor, toThePowerOf, term2), factor)(input)
 // const factor = or(operand, succeededBy(precededBy(openParens, expression), closeParens))
 
 const operand = or(
@@ -239,8 +239,8 @@ const operand = or(
 
 const expression: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    and3(term1, or(addedTo, subtractedFrom), expression),
-    term1
+    and3(multiplicationDivisionTerm, or(addedTo, subtractedFrom), expression),
+    multiplicationDivisionTerm
   )(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
@@ -266,10 +266,10 @@ const expression: Parser<ExpressionType> = input => {
   return [result, rest]
 }
 
-const term1: Parser<ExpressionType> = input => {
+const multiplicationDivisionTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    and3(term2, or(multipliedBy, dividedBy), term1),
-    term2
+    and3(exponentiationTerm, or(multipliedBy, dividedBy), multiplicationDivisionTerm),
+    exponentiationTerm
   )(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
@@ -295,7 +295,16 @@ const term1: Parser<ExpressionType> = input => {
   return [result, rest]
 }
 
-const term2 = (input: string) => or(and3(factor, toThePowerOf, term1), factor)(input)
+const exponentiationTerm: Parser<ExpressionType> = input => {
+  const [result, rest] = or(
+    and3(factor, toThePowerOf, exponentiationTerm),
+    factor
+  )(input) as ParserResult<ExpressionType>
+
+  if (isError(result)) return [result, input]
+
+  return [result, rest]
+}
 
 const factor = or(operand, and3(openParens, expression, closeParens))
 

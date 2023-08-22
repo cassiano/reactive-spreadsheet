@@ -241,7 +241,7 @@ const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects
 // )
 
 // Spiral sequence.
-const SPIRAL_1ST_SEGMENT_SIZE = 20
+const SPIRAL_1ST_SEGMENT_SIZE = 10
 const sheetData: SheetDataType = generateSpiralSequence(
   SPIRAL_1ST_SEGMENT_SIZE,
   'south',
@@ -251,7 +251,7 @@ const sheetData: SheetDataType = generateSpiralSequence(
 )
 
 // Reversed spiral sequence.
-// const REVERSED_SEQUENCE_TERMS = 20
+// const REVERSED_SEQUENCE_TERMS = 10
 // const sheetData: SheetDataType = generateSpiralSequence(
 //   REVERSED_SEQUENCE_TERMS,
 //   'south',
@@ -261,57 +261,7 @@ const sheetData: SheetDataType = generateSpiralSequence(
 // )
 
 // Cell squares.
-// const sheetData: SheetDataType = generateCellSquares(50, 'A1', 1)
-
-// Euler calculation.
-// const EULER_TERMS = 18
-// const sheetData: SheetDataType = sequenceReduce(
-//   EULER_TERMS - 1,
-//   (acc, i) => ({
-//     ...acc,
-//     [`A${i + 2}`]: `=A${i + 1}+1`, // Col A: N
-//     [`B${i + 2}`]: `=B${i + 1}*A${i + 2}`, // Col B: N!
-//     [`C${i + 2}`]: `=1/B${i + 2}`, // Col C: 1 / N!
-//     [`D${i + 2}`]: `=SUM(C1:C${i + 2})`, // Col D: Σ (1 / N!), 0 <= N < ∞
-//   }),
-//   {
-//     A1: 0,
-//     B1: 1,
-//     C1: '=1/B1',
-//     D1: '=SUM(C1:C1)',
-//   }
-// )
-
-// Reversed Euler calculation.
-// const EULER_TERMS = 18
-// const sheetData: SheetDataType = sequenceReduce(
-//   EULER_TERMS - 1,
-//   (acc, i) => ({
-//     ...acc,
-//     [`A${i + 2}`]: `=A${i + 3}+1`, // Col A: N
-//     [`B${i + 2}`]: `=A${i + 2} <= 1 ? 1 : B${i + 3}*A${i + 2}`, // Col B: N!
-//     [`C${i + 2}`]: `=1/B${i + 2}`, // Col C: 1 / N!
-//     [`D${i + 2}`]: `=1+SUM(C${i + 2}:C${EULER_TERMS})`, // Col D: 1 + Σ (1 / N!), 1 <= N < ∞
-//   }),
-//   {
-//     A1: '=A2+1',
-//     B1: '=A1 <= 1 ? 1 : B2*A1',
-//     C1: '=1/B1',
-//     D1: `=1+SUM(C1:C${EULER_TERMS})`,
-//   }
-// )
-
-// Powers of 2.
-// const POWERS_OF_2_TERMS = 20
-// const sheetData: SheetDataType = sequenceReduce(
-//   POWERS_OF_2_TERMS - 1,
-//   (acc, i) => ({
-//     ...acc,
-//     [`A${i + 2}`]: `=A${i + 1}+1`, // N
-//     [`B${i + 2}`]: `=SUM(B1:B${i + 1})+1`, // 2ˆN
-//   }),
-//   { A1: 0, B1: 1 }
-// )
+// const sheetData: SheetDataType = generateCellSquares(30, 'A1', 1)
 
 const sheet: SheetType = loadSheet(sheetData)
 const sheetCellInputs: CellInputsType = {}
