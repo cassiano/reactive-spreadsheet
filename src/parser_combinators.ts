@@ -229,8 +229,8 @@ const operand = or(
   )
 )
 
-const expression: any = (input: string) => {
-  const [result, rest] = or(and3(term, or(plus, minus), expression), term)(input)
+const expression: Parser<ExpressionType> = input => {
+  const [result, rest] = or(and3(term, or(plus, minus), expression), term)(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
 
@@ -239,7 +239,7 @@ const expression: any = (input: string) => {
   // 1) '+' is both left-associative (i.e. can be evaluated from left to right) and right-associative
   //    (from right to left), so: a + b + c = a + (b + c) = (a + b) + c
   // 2) '-' is only left-associative, so: a - b - c = (a - b) - c ≠ a - (b - c)
-  // 3) our parser will effectively evaluate from right to left
+  // 3) our parser is right-recursive (so will effectively evaluate from right to left)
   //
   // replace `a - b` by `a + (-b)`.
   if (Array.isArray(result) && result[1] === OperatorType.Subtraction && Array.isArray(result[2])) {
@@ -255,8 +255,8 @@ const expression: any = (input: string) => {
   return [result, rest]
 }
 
-const term: any = (input: string) => {
-  const [result, rest] = or(and3(factor, or(times, dividedBy), term), factor)(input)
+const term: Parser<ExpressionType> = input => {
+  const [result, rest] = or(and3(factor, or(times, dividedBy), term), factor)(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
 
@@ -265,7 +265,7 @@ const term: any = (input: string) => {
   // 1) '*' is both left-associative (i.e. can be evaluated from left to right) and right-associative
   //    (from right to left), so: a * b * c = a * (b * c) = (a * b) * c
   // 2) '/' is only left-associative, so: a / b / c = (a / b) / c ≠ a / (b / c)
-  // 3) our parser will effectively evaluate from right to left
+  // 3) our parser is right-recursive (so will effectively evaluate from right to left)
   //
   // replace `a / b` by `a * (1 / b)`.
   if (Array.isArray(result) && result[1] === OperatorType.Division && Array.isArray(result[2])) {

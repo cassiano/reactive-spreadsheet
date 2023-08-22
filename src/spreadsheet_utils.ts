@@ -137,7 +137,6 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
       case OperatorType.Division:
         return leftOperand / rightOperand
       default: {
-        // const _exhaustiveCheck: never = middle
         throw new Error(`Invalid operator ${middle}`)
       }
     }
@@ -146,7 +145,7 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
 
 export const evaluateFormula = (sheet: SheetType, value: string): number => {
   const match = formula(value.trim())
-  const expression = match[0] as ExpressionType
+  const expression = match[0]
 
   if (isError(expression) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
 
