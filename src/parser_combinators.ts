@@ -198,18 +198,19 @@ const float = map(
 
 const numeric = or(float, integer)
 
-const times = char('*')
-const dividedBy = char('/')
+export const ADDITION = '+'
+export const SUBTRACTION = '-'
+export const MULTIPLICATION = '*'
+export const DIVISION = '/'
+
+const addedTo = char(ADDITION)
+const subtractedFrom = char(SUBTRACTION)
+const multipliedBy = char(MULTIPLICATION)
+const dividedBy = char(DIVISION)
 const openParens = char('(')
 const closeParens = char(')')
 
-// export type OperatorType = '+' | '-' | '*' | '/'
-export enum OperatorType {
-  Addition = '+',
-  Subtraction = '-',
-  Multiplication = '*',
-  Division = '/',
-}
+export type OperatorType = typeof ADDITION | typeof SUBTRACTION | typeof MULTIPLICATION | typeof DIVISION
 export type ExpressionType =
   | (string | number)
   | [ExpressionType, OperatorType, ExpressionType]
@@ -225,12 +226,15 @@ export type ExpressionType =
 const operand = or(
   numeric,
   map(and(optional(sign), ref), ([signChar, reference]) =>
-    signChar === '-' ? [-1, OperatorType.Multiplication, reference] : reference
+    signChar === '-' ? [-1, MULTIPLICATION, reference] : reference
   )
 )
 
 const expression: Parser<ExpressionType> = input => {
-  const [result, rest] = or(and3(term, or(plus, minus), expression), term)(input) as ParserResult<ExpressionType>
+  const [result, rest] = or(
+    and3(term, or(addedTo, subtractedFrom), expression),
+    term
+  )(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
 
@@ -242,13 +246,13 @@ const expression: Parser<ExpressionType> = input => {
   // 3) our parser is right-recursive (so will effectively evaluate from right to left)
   //
   // replace `a - b` by `a + (-b)`.
-  if (Array.isArray(result) && result[1] === OperatorType.Subtraction && Array.isArray(result[2])) {
-    result[1] = OperatorType.Addition
+  if (Array.isArray(result) && result[1] === SUBTRACTION && Array.isArray(result[2])) {
+    result[1] = ADDITION
 
     if (result[2][0] === '(' && result[2][2] === ')') {
-      result[2] = [-1, OperatorType.Multiplication, result[2][1]]
+      result[2] = [-1, MULTIPLICATION, result[2][1]]
     } else {
-      result[2][0] = [-1, OperatorType.Multiplication, result[2][0]]
+      result[2][0] = [-1, MULTIPLICATION, result[2][0]]
     }
   }
 
@@ -256,7 +260,10 @@ const expression: Parser<ExpressionType> = input => {
 }
 
 const term: Parser<ExpressionType> = input => {
-  const [result, rest] = or(and3(factor, or(times, dividedBy), term), factor)(input) as ParserResult<ExpressionType>
+  const [result, rest] = or(
+    and3(factor, or(multipliedBy, dividedBy), term),
+    factor
+  )(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
 
@@ -268,13 +275,13 @@ const term: Parser<ExpressionType> = input => {
   // 3) our parser is right-recursive (so will effectively evaluate from right to left)
   //
   // replace `a / b` by `a * (1 / b)`.
-  if (Array.isArray(result) && result[1] === OperatorType.Division && Array.isArray(result[2])) {
-    result[1] = OperatorType.Multiplication
+  if (Array.isArray(result) && result[1] === DIVISION && Array.isArray(result[2])) {
+    result[1] = MULTIPLICATION
 
     if (result[2][0] === '(' && result[2][2] === ')') {
-      result[2] = [1, OperatorType.Division, result[2][1]]
+      result[2] = [1, DIVISION, result[2][1]]
     } else {
-      result[2][0] = [1, OperatorType.Division, result[2][0]]
+      result[2][0] = [1, DIVISION, result[2][0]]
     }
   }
 

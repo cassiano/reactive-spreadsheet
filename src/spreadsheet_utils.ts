@@ -1,4 +1,4 @@
-import { ExpressionType, OperatorType, formula, isError } from './parser_combinators'
+import { ADDITION, DIVISION, ExpressionType, MULTIPLICATION, SUBTRACTION, formula, isError } from './parser_combinators'
 import { ComputedSignalKind, IComputedSignalWrapper, computed, times, signalReplacerFn } from './signals'
 
 const ALPHABET_LENGTH = 'Z'.charCodeAt(0) - 'A'.charCodeAt(0) + 1
@@ -128,13 +128,13 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
     const rightOperand = evaluateExpression(sheet, right)
 
     switch (middle) {
-      case OperatorType.Addition:
+      case ADDITION:
         return leftOperand + rightOperand
-      case OperatorType.Subtraction:
+      case SUBTRACTION:
         return leftOperand - rightOperand
-      case OperatorType.Multiplication:
+      case MULTIPLICATION:
         return leftOperand * rightOperand
-      case OperatorType.Division:
+      case DIVISION:
         return leftOperand / rightOperand
       default: {
         throw new Error(`Invalid operator ${middle}`)
