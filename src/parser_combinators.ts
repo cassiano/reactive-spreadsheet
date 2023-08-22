@@ -236,10 +236,10 @@ const expression: any = (input: string) => {
 
   // Given that:
   //
-  // 1) our parser will effectively evaluate from right to left
-  // 2) '+' and '-' are both left associative (i.e. evaluated from left to right)
-  // 3) '+' is commutative (i.e. a + b = b + a)
-  // 4) '-' is NOT commutative (i.e. a - b ≠ b - a)
+  // 1) '+' is both left-associative (i.e. can be evaluated from left to right) and right-associative
+  //    (from right to left), so: a + b + c = a + (b + c) = (a + b) + c
+  // 2) '-' is only left-associative, so: a - b - c = (a - b) - c ≠ a - (b - c)
+  // 3) our parser will effectively evaluate from right to left
   //
   // replace `a - b` by `a + (-b)`.
   if (Array.isArray(result) && result[1] === OperatorType.Subtraction && Array.isArray(result[2])) {
@@ -262,10 +262,10 @@ const term: any = (input: string) => {
 
   // Given that:
   //
-  // 1) our parser will effectively evaluate from right to left
-  // 2) '*' and '/' are both left associative (i.e. evaluated from left to right)
-  // 3) '*' is commutative (i.e. a * b = b * a)
-  // 4) '/' is NOT commutative (i.e. a / b ≠ b / a)
+  // 1) '*' is both left-associative (i.e. can be evaluated from left to right) and right-associative
+  //    (from right to left), so: a * b * c = a * (b * c) = (a * b) * c
+  // 2) '/' is only left-associative, so: a / b / c = (a / b) / c ≠ a / (b / c)
+  // 3) our parser will effectively evaluate from right to left
   //
   // replace `a / b` by `a * (1 / b)`.
   if (Array.isArray(result) && result[1] === OperatorType.Division && Array.isArray(result[2])) {
