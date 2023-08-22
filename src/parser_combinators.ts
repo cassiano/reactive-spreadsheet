@@ -128,7 +128,7 @@ const anyChar = (): Parser<SingleChar> => satisfy(_ => true)
 
 const word =
   (w: string): Parser<string> =>
-  (input: string) =>
+  input =>
     input.startsWith(w) ? [w, input.slice(w.length)] : [error('no match'), input]
 
 // const letter = satisfy(char => /[a-z]/i.test(char))
@@ -241,12 +241,12 @@ export type ExpressionType =
 // const factor = or(operand, succeededBy(precededBy(openParens, expression), closeParens))
 // const expression = additionSubtractionTerm
 
-const operand = or(
-  numeric,
-  map(and(optional(sign), ref), ([signChar, reference]) =>
-    signChar === MINUS_SIGN ? [-1, MULTIPLICATION, reference] : reference
+const optionallySigned = <A>(parser: Parser<A>) =>
+  map(and(optional(sign), parser), ([signChar, result]) =>
+    signChar === MINUS_SIGN ? ([-1, MULTIPLICATION, result] as const) : result
   )
-)
+
+const operand = or(numeric, optionallySigned(ref))
 
 const additionSubtractionTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
@@ -318,6 +318,6 @@ const exponentiationTerm: Parser<ExpressionType> = input => {
 }
 
 const expression = additionSubtractionTerm
-const factor = or(operand, and3(openParens, expression, closeParens))
+const factor = or(operand, optionallySigned(and3(openParens, expression, closeParens)))
 
 export const formula = precededBy(equals, expression)
