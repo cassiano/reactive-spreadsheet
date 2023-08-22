@@ -154,15 +154,20 @@ const hexNumber = concat(precededBy(word('0x'), hexDigits))
 const DOUBLE_QUOTE = '"'
 const SINGLE_QUOTE = "'"
 const BACK_TICK = '`'
+const UNDERSCORE = '_'
+const PLUS_SIGN = '+'
+const MINUS_SIGN = '-'
+const PERIOD = '.'
+const EQUALS = '='
 
 const doubleQuote = char(DOUBLE_QUOTE)
 const singleQuote = char(SINGLE_QUOTE)
 const backTick = char(BACK_TICK)
-const underscore = char('_')
-const plus = char('+')
-const minus = char('-')
-const period = char('.')
-const equals = char('=')
+const underscore = char(UNDERSCORE)
+const plus = char(PLUS_SIGN)
+const minus = char(MINUS_SIGN)
+const period = char(PERIOD)
+const equals = char(EQUALS)
 
 const string = concat(
   or3(
@@ -183,7 +188,7 @@ const natural = map(precededBy(optional(plus), digits), digs =>
   digs.reduce((acc, dig, i) => acc + dig * 10 ** (digs.length - (i + 1)), 0)
 )
 
-const integer = map(and(optional(sign), natural), ([signChar, nat]) => (signChar === '-' ? -1 : +1) * nat)
+const integer = map(and(optional(sign), natural), ([signChar, nat]) => (signChar === MINUS_SIGN ? -1 : 1) * nat)
 
 const naturalGreaterThanZero: Parser<number> = input => {
   const [result, rest] = natural(input)
@@ -206,14 +211,16 @@ export const SUBTRACTION = '-'
 export const MULTIPLICATION = '*'
 export const DIVISION = '/'
 export const EXPONENTIATION = '^'
+export const OPEN_PARENS = '('
+export const CLOSE_PARENS = ')'
 
 const addedTo = char(ADDITION)
 const subtractedFrom = char(SUBTRACTION)
 const multipliedBy = char(MULTIPLICATION)
 const dividedBy = char(DIVISION)
 const toThePowerOf = char(EXPONENTIATION)
-const openParens = char('(')
-const closeParens = char(')')
+const openParens = char(OPEN_PARENS)
+const closeParens = char(CLOSE_PARENS)
 
 export type OperatorType =
   | typeof ADDITION
@@ -224,23 +231,24 @@ export type OperatorType =
 export type ExpressionType =
   | (string | number)
   | [ExpressionType, OperatorType, ExpressionType]
-  | ['(', ExpressionType, ')']
+  | [typeof OPEN_PARENS, ExpressionType, typeof CLOSE_PARENS]
 
 // https://stackoverflow.com/questions/2969561/how-to-parse-mathematical-expressions-involving-parentheses
 //
-// const expression: Parser<ExpressionType> = input => or(and3(term1, or(plus, minus), expression), term1)(input)
-// const term1: Parser<ExpressionType> = input => or(and3(term2, or(times, dividedBy), term1), term2)(input)
-// const term2: Parser<ExpressionType> = input => or(and3(factor, toThePowerOf, term2), factor)(input)
+// const additionSubtractionTerm: Parser<ExpressionType> = input => or(and3(multiplicationDivisionTerm, or(plus, minus), expression), multiplicationDivisionTerm)(input)
+// const multiplicationDivisionTerm: Parser<ExpressionType> = input => or(and3(exponentiationTerm, or(times, dividedBy), multiplicationDivisionTerm), exponentiationTerm)(input)
+// const exponentiationTerm: Parser<ExpressionType> = input => or(and3(factor, toThePowerOf, exponentiationTerm), factor)(input)
 // const factor = or(operand, succeededBy(precededBy(openParens, expression), closeParens))
+// const expression = additionSubtractionTerm
 
 const operand = or(
   numeric,
   map(and(optional(sign), ref), ([signChar, reference]) =>
-    signChar === '-' ? [-1, MULTIPLICATION, reference] : reference
+    signChar === MINUS_SIGN ? [-1, MULTIPLICATION, reference] : reference
   )
 )
 
-const expression: Parser<ExpressionType> = input => {
+const additionSubtractionTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
     and3(multiplicationDivisionTerm, or(addedTo, subtractedFrom), expression),
     multiplicationDivisionTerm
@@ -259,7 +267,7 @@ const expression: Parser<ExpressionType> = input => {
   if (Array.isArray(result) && result[1] === SUBTRACTION && Array.isArray(result[2])) {
     result[1] = ADDITION
 
-    if (result[2][0] === '(' && result[2][2] === ')') {
+    if (result[2][0] === OPEN_PARENS && result[2][2] === CLOSE_PARENS) {
       result[2] = [-1, MULTIPLICATION, result[2][1]]
     } else {
       result[2][0] = [-1, MULTIPLICATION, result[2][0]]
@@ -288,7 +296,7 @@ const multiplicationDivisionTerm: Parser<ExpressionType> = input => {
   if (Array.isArray(result) && result[1] === DIVISION && Array.isArray(result[2])) {
     result[1] = MULTIPLICATION
 
-    if (result[2][0] === '(' && result[2][2] === ')') {
+    if (result[2][0] === OPEN_PARENS && result[2][2] === CLOSE_PARENS) {
       result[2] = [1, DIVISION, result[2][1]]
     } else {
       result[2][0] = [1, DIVISION, result[2][0]]
@@ -309,6 +317,7 @@ const exponentiationTerm: Parser<ExpressionType> = input => {
   return [result, rest]
 }
 
+const expression = additionSubtractionTerm
 const factor = or(operand, and3(openParens, expression, closeParens))
 
 export const formula = precededBy(equals, expression)

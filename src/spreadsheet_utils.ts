@@ -1,9 +1,11 @@
 import {
   ADDITION,
+  CLOSE_PARENS,
   DIVISION,
   EXPONENTIATION,
   ExpressionType,
   MULTIPLICATION,
+  OPEN_PARENS,
   SUBTRACTION,
   formula,
   isError,
@@ -131,7 +133,7 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
     // [ExpressionType, OperatorType, ExpressionType] | ['(', ExpressionType, ')']
     const [left, middle, right] = expr // Should be typed as [ExpressionType | '(', OperatorType | ExpressionType, ExpressionType | ')']
 
-    if (left === '(' && right === ')') return evaluateExpression(sheet, middle)
+    if (left === OPEN_PARENS && right === CLOSE_PARENS) return evaluateExpression(sheet, middle)
 
     const leftOperand = evaluateExpression(sheet, left)
     const rightOperand = evaluateExpression(sheet, right)
