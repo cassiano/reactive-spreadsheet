@@ -250,7 +250,7 @@ const operand = or(numeric, optionallySigned(ref))
 
 const additionSubtractionTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    and3(multiplicationDivisionTerm, or(addedTo, subtractedFrom), expression),
+    and3(multiplicationDivisionTerm, or(addedTo, subtractedFrom), additionSubtractionTerm),
     multiplicationDivisionTerm
   )(input) as ParserResult<ExpressionType>
 
@@ -317,7 +317,8 @@ const exponentiationTerm: Parser<ExpressionType> = input => {
   return [result, rest]
 }
 
+const factor = or(operand, optionallySigned(and3(openParens, additionSubtractionTerm, closeParens)))
+
 const expression = additionSubtractionTerm
-const factor = or(operand, optionallySigned(and3(openParens, expression, closeParens)))
 
 export const formula = precededBy(equals, expression)
