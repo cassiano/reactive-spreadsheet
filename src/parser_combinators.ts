@@ -231,7 +231,13 @@ const exponentiate = or(char(EXPONENTIATE), charSequence(EXPONENTIATE_ALT))
 const openParens = char(OPEN_PARENS)
 const closeParens = char(CLOSE_PARENS)
 
-export type OperatorType = typeof ADD | typeof SUBTRACT | typeof MULTIPLY | typeof DIVIDE | typeof EXPONENTIATE
+export type OperatorType =
+  | typeof ADD
+  | typeof SUBTRACT
+  | typeof MULTIPLY
+  | typeof DIVIDE
+  | typeof EXPONENTIATE
+  | typeof EXPONENTIATE_ALT
 export type ExpressionType =
   | (string | number)
   | [ExpressionType, OperatorType, ExpressionType]

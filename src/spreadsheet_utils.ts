@@ -7,6 +7,7 @@ import {
   ExpressionType,
   MULTIPLY,
   OPEN_PARENS,
+  OperatorType,
   SUBTRACT,
   formula,
   isError,
@@ -138,8 +139,9 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
 
     const leftOperand = evaluateExpression(sheet, left)
     const rightOperand = evaluateExpression(sheet, right)
+    const operator = middle as OperatorType
 
-    switch (middle) {
+    switch (operator) {
       case ADD:
         return leftOperand + rightOperand
       case SUBTRACT:
@@ -152,6 +154,7 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
       case EXPONENTIATE_ALT:
         return leftOperand ** rightOperand
       default: {
+        const _exhaustiveCheck: never = operator
         throw new Error(`Invalid operator ${middle}`)
       }
     }
