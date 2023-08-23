@@ -29,19 +29,20 @@ export type RefType = string
 export type RefOrRowColType = RefType | RowColType
 export type CellValueType = string | number | undefined
 
-export type SheetCellType = string
+export type SheetCellType = string | number
 export type SheetDataType = {
   [ref: RefType]: SheetCellType
 }
+export type CellType = {
+  formula?: {
+    rawValue: string
+    parsedValue?: ExpressionType
+  }
+  signalWrapper: IComputedSignalWrapper<number>
+}
 export type SheetType = {
   cells: {
-    [ref: RefType]: {
-      formula?: {
-        rawValue: string
-        parsedValue?: ExpressionType
-      }
-      signalWrapper: IComputedSignalWrapper<number>
-    }
+    [ref: RefType]: CellType
   }
   rows: number
   cols: number
@@ -166,34 +167,28 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
 
 export const evaluateFormula = (sheet: SheetType, value: string, ref?: RefType): number => {
   let expression: ExpressionType | Error
+  let useCachedVersion = false
+  let cell: CellType | undefined
 
   if (ref !== undefined && ref in sheet.cells) {
-    const cell = sheet.cells[ref]
+    cell = sheet.cells[ref]
 
-    if (cell.formula === undefined)
-      throw new Error(`Cell formula is undefined for cell '${ref}' and formula '${value}'`)
+    useCachedVersion = cell.formula?.parsedValue !== undefined
+  }
 
-    if (cell.formula.parsedValue === undefined) {
-      // log(`Calculating ${ref} cell formula 1...`)
+  if (useCachedVersion) {
+    // log(`Using cached formula for ${ref} cell...`)
 
-      const match = formula(value.trim())
-      expression = match[0]
-
-      if (isError(expression) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
-
-      cell.formula.parsedValue = expression
-    } else {
-      // log(`Reading ${ref} cell formula from the cache...`)
-
-      expression = cell.formula.parsedValue
-    }
+    expression = cell!.formula!.parsedValue!
   } else {
-    // log(`Calculating ${ref} cell formula 2...`)
+    // log(`Calculating ${ref} cell formula...`)
 
     const match = formula(value.trim())
     expression = match[0]
 
-    if (isError(expression) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
+    if (isError(expression) || match[1] !== '') throw `Invalid formula '${value}' for cell ${ref}`
+
+    if (cell !== undefined) cell.formula!.parsedValue = expression
   }
 
   return evaluateExpression(sheet, expression)

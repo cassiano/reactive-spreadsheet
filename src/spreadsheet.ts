@@ -8,8 +8,6 @@ import {
   generateSpiralSequence,
   loadSheet,
   repeat,
-  sheetAsJson,
-  sheetAsTable,
 } from './spreadsheet_utils'
 import './style.css'
 import { RefType } from './spreadsheet_utils'
@@ -243,7 +241,7 @@ const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects
 // )
 
 // Spiral sequence.
-const SPIRAL_1ST_SEGMENT_SIZE = 5
+const SPIRAL_1ST_SEGMENT_SIZE = 15
 const sheetData: SheetDataType = generateSpiralSequence(
   SPIRAL_1ST_SEGMENT_SIZE,
   'south',
@@ -286,6 +284,6 @@ export const refreshSheet = () => {
 
 refreshSheet()
 
-window.sheetAsJson = sheetAsJson
-window.sheetAsTable = sheetAsTable
-window.sheet = sheet
+// window.sheetAsJson = sheetAsJson
+// window.sheetAsTable = sheetAsTable
+// window.sheet = sheet
