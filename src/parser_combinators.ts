@@ -148,8 +148,16 @@ const hexDigit: Parser<SingleChar> = satisfy(
   char => (char >= '0' && char <= '9') || (char.toUpperCase() >= 'A' && char.toUpperCase() <= 'F')
 )
 const hexDigits = many1(hexDigit)
-// const hexNumber = map(and3(char('0'), char('x'), hexDigits), ([_0, _x, digs]) => digs.join(''))
-const hexNumber = concat(precededBy(word('0x'), hexDigits))
+const hexNumber = concat(precededBy(charSequence('0x'), hexDigits))
+
+// Binary.
+const ZERO = '0'
+const ONE = '1'
+const zero = char(ZERO)
+const one = char(ONE)
+const bit = or(zero, one)
+const binaryDigits = many1(bit)
+const binaryNumber = concat(precededBy(charSequence('0b'), binaryDigits))
 
 const DOUBLE_QUOTE = '"'
 const SINGLE_QUOTE = "'"
