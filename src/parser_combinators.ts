@@ -126,7 +126,7 @@ const char = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c === 
 const allButChar = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c !== singleChar)
 const anyChar = (): Parser<SingleChar> => satisfy(_ => true)
 
-const word =
+const charSequence =
   (w: string): Parser<string> =>
   input =>
     input.startsWith(w) ? [w, input.slice(w.length)] : [error('no match'), input]
@@ -185,8 +185,8 @@ const string = concat(
   )
 )
 
-const identifierChar = map(or3(letter, digit, underscore), res => res.toString())
-const identifier = concat(many1(identifierChar))
+const wordChar = map(or3(letter, digit, underscore), res => res.toString())
+const word = concat(many1(wordChar))
 
 const ref = map(and(letters, digits), result => result.flat(2).join(''))
 
@@ -227,7 +227,7 @@ const add = char(ADD)
 const subtract = char(SUBTRACT)
 const multiply = char(MULTIPLY)
 const divided = char(DIVIDE)
-const exponentiate = or(char(EXPONENTIATE), word(EXPONENTIATE_ALT))
+const exponentiate = or(char(EXPONENTIATE), charSequence(EXPONENTIATE_ALT))
 const openParens = char(OPEN_PARENS)
 const closeParens = char(CLOSE_PARENS)
 
