@@ -29,55 +29,55 @@ const sequence =
   }
 
 const or =
-  <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<A | B> =>
+  <A, B>(parserA: Parser<A>, parserB: Parser<B>): Parser<A | B> =>
   input => {
-    const [result1, rest1] = parser1(input)
+    const [resultA, restA] = parserA(input)
 
-    return isError(result1) ? parser2(input) : [result1, rest1]
+    return isError(resultA) ? parserB(input) : [resultA, restA]
   }
 const or2 = or
 
-const or3 = <A, B, C>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>): Parser<A | B | C> =>
-  or(parser1, or2(parser2, parser3))
+const or3 = <A, B, C>(parserA: Parser<A>, parserB: Parser<B>, parserC: Parser<C>): Parser<A | B | C> =>
+  or(parserA, or2(parserB, parserC))
 
 const or4 = <A, B, C, D>(
-  parser1: Parser<A>,
-  parser2: Parser<B>,
-  parser3: Parser<C>,
-  parser4: Parser<D>
-): Parser<A | B | C | D> => or(parser1, or3(parser2, parser3, parser4))
+  parserA: Parser<A>,
+  parserB: Parser<B>,
+  parserC: Parser<C>,
+  parserD: Parser<D>
+): Parser<A | B | C | D> => or(parserA, or3(parserB, parserC, parserD))
 
 const or5 = <A, B, C, D, E>(
-  parser1: Parser<A>,
-  parser2: Parser<B>,
-  parser3: Parser<C>,
-  parser4: Parser<D>,
-  parser5: Parser<E>
-): Parser<A | B | C | D | E> => or(parser1, or4(parser2, parser3, parser4, parser5))
+  parserA: Parser<A>,
+  parserB: Parser<B>,
+  parserC: Parser<C>,
+  parserD: Parser<D>,
+  parserE: Parser<E>
+): Parser<A | B | C | D | E> => or(parserA, or4(parserB, parserC, parserD, parserE))
 
-const and = <A, B>(parser1: Parser<A>, parser2: Parser<B>): Parser<[A, B]> =>
-  sequence(parser1, result1 => map(parser2, result2 => [result1, result2]))
+const and = <A, B>(parserA: Parser<A>, parserB: Parser<B>): Parser<[A, B]> =>
+  sequence(parserA, resultA => map(parserB, resultB => [resultA, resultB]))
 const and2 = and
 
-const and3 = <A, B, C>(parser1: Parser<A>, parser2: Parser<B>, parser3: Parser<C>): Parser<[A, B, C]> =>
-  map(and(parser1, and2(parser2, parser3)), ([result1, results]) => [result1, ...results])
+const and3 = <A, B, C>(parserA: Parser<A>, parserB: Parser<B>, parserC: Parser<C>): Parser<[A, B, C]> =>
+  map(and(parserA, and2(parserB, parserC)), ([resultA, otherResults]) => [resultA, ...otherResults])
 
 const and4 = <A, B, C, D>(
-  parser1: Parser<A>,
-  parser2: Parser<B>,
-  parser3: Parser<C>,
-  parser4: Parser<D>
+  parserA: Parser<A>,
+  parserB: Parser<B>,
+  parserC: Parser<C>,
+  parserD: Parser<D>
 ): Parser<[A, B, C, D]> =>
-  map(and(parser1, and3(parser2, parser3, parser4)), ([result1, results]) => [result1, ...results])
+  map(and(parserA, and3(parserB, parserC, parserD)), ([resultA, otherResults]) => [resultA, ...otherResults])
 
 const and5 = <A, B, C, D, E>(
-  parser1: Parser<A>,
-  parser2: Parser<B>,
-  parser3: Parser<C>,
-  parser4: Parser<D>,
-  parser5: Parser<E>
+  parserA: Parser<A>,
+  parserB: Parser<B>,
+  parserC: Parser<C>,
+  parserD: Parser<D>,
+  parserE: Parser<E>
 ): Parser<[A, B, C, D, E]> =>
-  map(and(parser1, and4(parser2, parser3, parser4, parser5)), ([result1, results]) => [result1, ...results])
+  map(and(parserA, and4(parserB, parserC, parserD, parserE)), ([resultA, otherResults]) => [resultA, ...otherResults])
 
 type ManyOccurencesType = { minOccurences?: number; maxOccurences?: number }
 
@@ -90,9 +90,9 @@ const manyN =
 
     if (isError(result)) return minOccurences > 0 ? [result, input] : [[], input]
 
-    return map(manyN(parser, { minOccurences: minOccurences - 1, maxOccurences: maxOccurences - 1 }), results => [
+    return map(manyN(parser, { minOccurences: minOccurences - 1, maxOccurences: maxOccurences - 1 }), otherResults => [
       result,
-      ...results,
+      ...otherResults,
     ])(rest)
   }
 
@@ -206,28 +206,24 @@ const float = map(
 
 const numeric = or(float, integer)
 
-export const ADDITION = '+'
-export const SUBTRACTION = '-'
-export const MULTIPLICATION = '*'
-export const DIVISION = '/'
-export const EXPONENTIATION = '^'
+export const ADD = '+'
+export const SUBTRACT = '-'
+export const MULTIPLY = '*'
+export const DIVIDE = '/'
+export const EXPONENTIATE = '^'
+export const EXPONENTIATE_ALT = '**'
 export const OPEN_PARENS = '('
 export const CLOSE_PARENS = ')'
 
-const addedTo = char(ADDITION)
-const subtractedFrom = char(SUBTRACTION)
-const multipliedBy = char(MULTIPLICATION)
-const dividedBy = char(DIVISION)
-const toThePowerOf = char(EXPONENTIATION)
+const add = char(ADD)
+const subtract = char(SUBTRACT)
+const multiply = char(MULTIPLY)
+const divided = char(DIVIDE)
+const exponentiate = or(char(EXPONENTIATE), word(EXPONENTIATE_ALT))
 const openParens = char(OPEN_PARENS)
 const closeParens = char(CLOSE_PARENS)
 
-export type OperatorType =
-  | typeof ADDITION
-  | typeof SUBTRACTION
-  | typeof MULTIPLICATION
-  | typeof DIVISION
-  | typeof EXPONENTIATION
+export type OperatorType = typeof ADD | typeof SUBTRACT | typeof MULTIPLY | typeof DIVIDE | typeof EXPONENTIATE
 export type ExpressionType =
   | (string | number)
   | [ExpressionType, OperatorType, ExpressionType]
@@ -243,14 +239,14 @@ export type ExpressionType =
 
 const optionallySigned = <A>(parser: Parser<A>) =>
   map(and(optional(sign), parser), ([signChar, result]) =>
-    signChar === MINUS_SIGN ? ([-1, MULTIPLICATION, result] as const) : result
+    signChar === MINUS_SIGN ? ([-1, MULTIPLY, result] as const) : result
   )
 
 const operand = or(numeric, optionallySigned(ref))
 
 const additiveTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    and3(multiplicativeTerm, or(addedTo, subtractedFrom), additiveTerm),
+    and3(multiplicativeTerm, or(add, subtract), additiveTerm),
     multiplicativeTerm
   )(input) as ParserResult<ExpressionType>
 
@@ -264,13 +260,13 @@ const additiveTerm: Parser<ExpressionType> = input => {
   // 3) our parser is right-recursive (so will effectively evaluate from right to left)
   //
   // replace `a - b` by `a + (-b)`.
-  if (Array.isArray(result) && result[1] === SUBTRACTION && Array.isArray(result[2])) {
-    result[1] = ADDITION
+  if (Array.isArray(result) && result[1] === SUBTRACT && Array.isArray(result[2])) {
+    result[1] = ADD
 
     if (result[2][0] === OPEN_PARENS && result[2][2] === CLOSE_PARENS) {
-      result[2] = [-1, MULTIPLICATION, result[2][1]]
+      result[2] = [-1, MULTIPLY, result[2][1]]
     } else {
-      result[2][0] = [-1, MULTIPLICATION, result[2][0]]
+      result[2][0] = [-1, MULTIPLY, result[2][0]]
     }
   }
 
@@ -279,7 +275,7 @@ const additiveTerm: Parser<ExpressionType> = input => {
 
 const multiplicativeTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    and3(exponentialTerm, or(multipliedBy, dividedBy), multiplicativeTerm),
+    and3(exponentialTerm, or(multiply, divided), multiplicativeTerm),
     exponentialTerm
   )(input) as ParserResult<ExpressionType>
 
@@ -293,13 +289,13 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
   // 3) our parser is right-recursive (so will effectively evaluate from right to left)
   //
   // replace `a / b` by `a * (1 / b)`.
-  if (Array.isArray(result) && result[1] === DIVISION && Array.isArray(result[2])) {
-    result[1] = MULTIPLICATION
+  if (Array.isArray(result) && result[1] === DIVIDE && Array.isArray(result[2])) {
+    result[1] = MULTIPLY
 
     if (result[2][0] === OPEN_PARENS && result[2][2] === CLOSE_PARENS) {
-      result[2] = [1, DIVISION, result[2][1]]
+      result[2] = [1, DIVIDE, result[2][1]]
     } else {
-      result[2][0] = [1, DIVISION, result[2][0]]
+      result[2][0] = [1, DIVIDE, result[2][0]]
     }
   }
 
@@ -307,7 +303,7 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
 }
 
 const exponentialTerm: Parser<ExpressionType> = input => {
-  const [result, rest] = or(and3(factor, toThePowerOf, exponentialTerm), factor)(input) as ParserResult<ExpressionType>
+  const [result, rest] = or(and3(factor, exponentiate, exponentialTerm), factor)(input) as ParserResult<ExpressionType>
 
   if (isError(result)) return [result, input]
 

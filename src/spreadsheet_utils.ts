@@ -1,12 +1,13 @@
 import {
-  ADDITION,
+  ADD,
   CLOSE_PARENS,
-  DIVISION,
-  EXPONENTIATION,
+  DIVIDE,
+  EXPONENTIATE,
+  EXPONENTIATE_ALT,
   ExpressionType,
-  MULTIPLICATION,
+  MULTIPLY,
   OPEN_PARENS,
-  SUBTRACTION,
+  SUBTRACT,
   formula,
   isError,
 } from './parser_combinators'
@@ -139,15 +140,16 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
     const rightOperand = evaluateExpression(sheet, right)
 
     switch (middle) {
-      case ADDITION:
+      case ADD:
         return leftOperand + rightOperand
-      case SUBTRACTION:
+      case SUBTRACT:
         return leftOperand - rightOperand
-      case MULTIPLICATION:
+      case MULTIPLY:
         return leftOperand * rightOperand
-      case DIVISION:
+      case DIVIDE:
         return leftOperand / rightOperand
-      case EXPONENTIATION:
+      case EXPONENTIATE:
+      case EXPONENTIATE_ALT:
         return leftOperand ** rightOperand
       default: {
         throw new Error(`Invalid operator ${middle}`)
