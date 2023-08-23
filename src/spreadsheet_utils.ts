@@ -29,14 +29,17 @@ export type RefType = string
 export type RefOrRowColType = RefType | RowColType
 export type CellValueType = string | number | undefined
 
-export type SheetCellType = number | string
+export type SheetCellType = string
 export type SheetDataType = {
   [ref: RefType]: SheetCellType
 }
 export type SheetType = {
   cells: {
     [ref: RefType]: {
-      formula?: SheetCellType
+      formula?: {
+        rawValue: string
+        parsedValue?: ExpressionType
+      }
       signalWrapper: IComputedSignalWrapper<number>
     }
   }
@@ -161,18 +164,45 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
   } else throw new Error(`Invalid type '${typeof expr}' for expression '${expr}'`)
 }
 
-export const evaluateFormula = (sheet: SheetType, value: string): number => {
-  const match = formula(value.trim())
-  const expression = match[0]
+export const evaluateFormula = (sheet: SheetType, value: string, ref?: RefType): number => {
+  let expression: ExpressionType | Error
 
-  if (isError(expression) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
+  if (ref !== undefined && ref in sheet.cells) {
+    const cell = sheet.cells[ref]
+
+    if (cell.formula === undefined)
+      throw new Error(`Cell formula is undefined for cell '${ref}' and formula '${value}'`)
+
+    if (cell.formula.parsedValue === undefined) {
+      // log(`Calculating ${ref} cell formula 1...`)
+
+      const match = formula(value.trim())
+      expression = match[0]
+
+      if (isError(expression) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
+
+      cell.formula.parsedValue = expression
+    } else {
+      // log(`Reading ${ref} cell formula from the cache...`)
+
+      expression = cell.formula.parsedValue
+    }
+  } else {
+    // log(`Calculating ${ref} cell formula 2...`)
+
+    const match = formula(value.trim())
+    expression = match[0]
+
+    if (isError(expression) || match[1] !== '') throw new Error(`Invalid formula ${value}`)
+  }
 
   return evaluateExpression(sheet, expression)
 }
 
 const upsertCell = (sheet: SheetType, ref: RefType, fn: () => number, formula?: string) => {
   if (ref in sheet.cells) {
-    sheet.cells[ref].formula = formula
+    sheet.cells[ref].formula = formula !== undefined ? { rawValue: formula } : undefined
+
     sheet.cells[ref].signalWrapper.set(fn)
   } else {
     addCell(sheet, ref, fn, formula)
@@ -193,7 +223,7 @@ export const loadSheet = (sheetData: SheetDataType) => {
       const trimmeValue = value.trim()
 
       if (trimmeValue[0] === '=') {
-        const fn = () => evaluateFormula(sheet, trimmeValue)
+        const fn = () => evaluateFormula(sheet, trimmeValue, ref)
 
         upsertCell(sheet, ref, fn, trimmeValue)
       } else throw new Error(`Invalid formula: '${trimmeValue}' must start with '='`)
@@ -205,9 +235,11 @@ export const loadSheet = (sheetData: SheetDataType) => {
 
 export const addCell = (sheet: SheetType, ref: RefType, fn: () => number, formula?: string) => {
   sheet.cells[ref] = {
-    formula,
-    signalWrapper: computed(ref, fn, { kind: ComputedSignalKind.Eager }),
+    formula: formula !== undefined ? { rawValue: formula } : undefined,
+    signalWrapper: computed(ref, () => 0), // Temporary signal. It will be replaced below, after the cell is created.
   }
+
+  sheet.cells[ref].signalWrapper = computed(ref, fn, { kind: ComputedSignalKind.Eager })
 
   const { row, col } = asCoords(ref)
 
@@ -220,8 +252,8 @@ export const updateCellFormula = (sheet: SheetType, ref: RefType, newFormula: st
 
   const sheetRef = sheet.cells[ref]
 
-  sheetRef.formula = newFormula
-  sheetRef.signalWrapper.set(() => evaluateFormula(sheet, newFormula))
+  sheetRef.formula = { rawValue: newFormula }
+  sheetRef.signalWrapper.set(() => evaluateFormula(sheet, newFormula, ref))
 }
 
 export const updateCellValue = (sheet: SheetType, ref: RefType, newValue: number) => {

@@ -156,7 +156,7 @@ export const makeCellReactive = (
 
     const sheetRef = sheet.cells[ref]
 
-    if (sheetRef.formula !== undefined) target.value = sheetRef.formula.toString()
+    if (sheetRef.formula !== undefined) target.value = sheetRef.formula.rawValue.toString()
 
     focusTimeoutId = selectCell()
   })
