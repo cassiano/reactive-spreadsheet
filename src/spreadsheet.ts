@@ -241,7 +241,7 @@ const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects
 // )
 
 // Spiral sequence.
-const SPIRAL_1ST_SEGMENT_SIZE = 15
+const SPIRAL_1ST_SEGMENT_SIZE = 10
 const sheetData: SheetDataType = generateSpiralSequence(
   SPIRAL_1ST_SEGMENT_SIZE,
   'south',

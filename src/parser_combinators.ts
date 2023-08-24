@@ -1,3 +1,5 @@
+import { RefType } from './spreadsheet_utils'
+
 const error = (msg: string) => new Error(msg)
 
 type ParserResult<T> = [resultOrError: T | Error, rest: string]
@@ -121,18 +123,26 @@ const succeededBy = <A, B>(parser: Parser<A>, parserAfter: Parser<B>): Parser<A>
 
 const delimitedBy = <A, B, C>(parserBefore: Parser<A>, parser: Parser<B>, parserAfter: Parser<C>): Parser<B> =>
   precededBy(parserBefore, succeededBy(parser, parserAfter))
+// map(and3(parserBefore, parser, parserAfter), ([_, result, __]) => result)
+
+const surroundedBy = <A, B>(parserBeforeAndAfter: Parser<A>, parser: Parser<B>): Parser<B> =>
+  delimitedBy(parserBeforeAndAfter, parser, parserBeforeAndAfter)
 
 const char = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c === singleChar)
 const allButChar = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c !== singleChar)
 const anyChar = (): Parser<SingleChar> => satisfy(_ => true)
 
 const charSequence =
-  (w: string): Parser<string> =>
+  (seq: string): Parser<string> =>
   input =>
-    input.startsWith(w) ? [w, input.slice(w.length)] : [error('no match'), input]
+    input.startsWith(seq) ? [seq, input.slice(seq.length)] : [error('no match'), input]
 
 // const letter = satisfy(char => /[a-z]/i.test(char))
-const letter = satisfy(char => char.toUpperCase() >= 'A' && char.toUpperCase() <= 'Z')
+const letter = satisfy(char => {
+  const upcasedChar = char.toUpperCase()
+
+  return upcasedChar >= 'A' && upcasedChar <= 'Z'
+})
 const letters = many1(letter)
 
 // Decimal.
@@ -144,9 +154,11 @@ const digit = map(
 const digits = many1(digit)
 
 // Hexadecimal.
-const hexDigit: Parser<SingleChar> = satisfy(
-  char => (char >= '0' && char <= '9') || (char.toUpperCase() >= 'A' && char.toUpperCase() <= 'F')
-)
+const hexDigit: Parser<SingleChar> = satisfy(char => {
+  const upcasedChar = char.toUpperCase()
+
+  return (upcasedChar >= '0' && upcasedChar <= '9') || (upcasedChar >= 'A' && upcasedChar <= 'F')
+})
 const hexDigits = many1(hexDigit)
 const hexNumber = concat(precededBy(charSequence('0x'), hexDigits))
 
@@ -179,21 +191,21 @@ const equals = char(EQUALS)
 
 const string = concat(
   or3(
-    precededBy(doubleQuote, succeededBy(many(allButChar(DOUBLE_QUOTE)), doubleQuote)),
-    precededBy(singleQuote, succeededBy(many(allButChar(SINGLE_QUOTE)), singleQuote)),
-    precededBy(backTick, succeededBy(many(allButChar(BACK_TICK)), backTick))
+    surroundedBy(doubleQuote, many(allButChar(DOUBLE_QUOTE))),
+    surroundedBy(singleQuote, many(allButChar(SINGLE_QUOTE))),
+    surroundedBy(backTick, many(allButChar(BACK_TICK)))
   )
 )
 
 const wordChar = map(or3(letter, digit, underscore), res => res.toString())
 const word = concat(many1(wordChar))
 
-const ref = map(and(letters, digits), result => result.flat(2).join(''))
-
 const sign = or(plus, minus)
 
+const BASE_10 = 10
+
 const natural = map(precededBy(optional(plus), digits), digs =>
-  digs.reduce((acc, dig, i) => acc + dig * 10 ** (digs.length - (i + 1)), 0)
+  digs.reduce((acc, dig, i) => acc + dig * BASE_10 ** (digs.length - (i + 1)), 0)
 )
 
 const integer = map(and(optional(sign), natural), ([signChar, nat]) => (signChar === MINUS_SIGN ? -1 : 1) * nat)
@@ -209,7 +221,7 @@ const naturalGreaterThanZero: Parser<number> = input => {
 
 const float = map(
   and(integer, precededBy(period, natural)),
-  ([int, nat]) => int + (nat === 0 ? 0 : (Math.sign(int) * nat) / 10 ** Math.trunc(Math.log10(nat) + 1))
+  ([int, nat]) => int + (nat === 0 ? 0 : (Math.sign(int) * nat) / BASE_10 ** Math.trunc(Math.log10(nat) + 1))
 )
 
 const numeric = or(float, integer)
@@ -239,22 +251,27 @@ export type OperatorType =
   | typeof EXPONENTIATE
   | typeof EXPONENTIATE_ALT
 export type ExpressionType =
-  | (string | number)
+  | (RefType | number) // Leaf nodes
   | [ExpressionType, OperatorType, ExpressionType]
   | [typeof OPEN_PARENS, ExpressionType, typeof CLOSE_PARENS]
 
 // https://stackoverflow.com/questions/2969561/how-to-parse-mathematical-expressions-involving-parentheses
 //
-// const additionSubtractionTerm: Parser<ExpressionType> = input => or(and3(multiplicationDivisionTerm, or(plus, minus), expression), multiplicationDivisionTerm)(input)
-// const multiplicationDivisionTerm: Parser<ExpressionType> = input => or(and3(exponentiationTerm, or(times, dividedBy), multiplicationDivisionTerm), exponentiationTerm)(input)
-// const exponentiationTerm: Parser<ExpressionType> = input => or(and3(factor, toThePowerOf, exponentiationTerm), factor)(input)
-// const factor = or(operand, succeededBy(precededBy(openParens, expression), closeParens))
+// const additionSubtractionTerm: Parser<ExpressionType> = input =>
+//   or(and3(multiplicationDivisionTerm, or(plus, minus), expression), multiplicationDivisionTerm)(input)
+// const multiplicationDivisionTerm: Parser<ExpressionType> = input =>
+//   or(and3(exponentiationTerm, or(times, dividedBy), multiplicationDivisionTerm), exponentiationTerm)(input)
+// const exponentiationTerm: Parser<ExpressionType> = input =>
+//   or(and3(factor, toThePowerOf, exponentiationTerm), factor)(input)
+// const factor = or(operand, delimitedBy(openParens, expression, closeParens))
 // const expression = additionSubtractionTerm
 
 const optionallySigned = <A>(parser: Parser<A>) =>
   map(and(optional(sign), parser), ([signChar, result]) =>
     signChar === MINUS_SIGN ? ([-1, MULTIPLY, result] as const) : result
   )
+
+const ref = concat(map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()]))
 
 const operand = or(numeric, optionallySigned(ref))
 
