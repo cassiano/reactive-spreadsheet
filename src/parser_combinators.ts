@@ -39,8 +39,11 @@ const or =
   }
 const or2 = or
 
-const or3 = <A, B, C>(parserA: Parser<A>, parserB: Parser<B>, parserC: Parser<C>): Parser<A | B | C> =>
-  or(parserA, or2(parserB, parserC))
+const or3 = <A, B, C>(
+  parserA: Parser<A>,
+  parserB: Parser<B>,
+  parserC: Parser<C>
+): Parser<A | B | C> => or(parserA, or2(parserB, parserC))
 
 const or4 = <A, B, C, D>(
   parserA: Parser<A>,
@@ -61,7 +64,11 @@ const and = <A, B>(parserA: Parser<A>, parserB: Parser<B>): Parser<[A, B]> =>
   sequence(parserA, resultA => map(parserB, resultB => [resultA, resultB]))
 const and2 = and
 
-const and3 = <A, B, C>(parserA: Parser<A>, parserB: Parser<B>, parserC: Parser<C>): Parser<[A, B, C]> =>
+const and3 = <A, B, C>(
+  parserA: Parser<A>,
+  parserB: Parser<B>,
+  parserC: Parser<C>
+): Parser<[A, B, C]> =>
   map(and(parserA, and2(parserB, parserC)), ([resultA, otherResults]) => [resultA, ...otherResults])
 
 const and4 = <A, B, C, D>(
@@ -70,7 +77,10 @@ const and4 = <A, B, C, D>(
   parserC: Parser<C>,
   parserD: Parser<D>
 ): Parser<[A, B, C, D]> =>
-  map(and(parserA, and3(parserB, parserC, parserD)), ([resultA, otherResults]) => [resultA, ...otherResults])
+  map(and(parserA, and3(parserB, parserC, parserD)), ([resultA, otherResults]) => [
+    resultA,
+    ...otherResults,
+  ])
 
 const and5 = <A, B, C, D, E>(
   parserA: Parser<A>,
@@ -79,12 +89,18 @@ const and5 = <A, B, C, D, E>(
   parserD: Parser<D>,
   parserE: Parser<E>
 ): Parser<[A, B, C, D, E]> =>
-  map(and(parserA, and4(parserB, parserC, parserD, parserE)), ([resultA, otherResults]) => [resultA, ...otherResults])
+  map(and(parserA, and4(parserB, parserC, parserD, parserE)), ([resultA, otherResults]) => [
+    resultA,
+    ...otherResults,
+  ])
 
 type ManyOccurencesType = { minOccurences?: number; maxOccurences?: number }
 
 const manyN =
-  <A>(parser: Parser<A>, { minOccurences = 0, maxOccurences = Infinity }: ManyOccurencesType = {}): Parser<A[]> =>
+  <A>(
+    parser: Parser<A>,
+    { minOccurences = 0, maxOccurences = Infinity }: ManyOccurencesType = {}
+  ): Parser<A[]> =>
   input => {
     if (maxOccurences === 0) return [[], input]
 
@@ -92,20 +108,24 @@ const manyN =
 
     if (isError(result)) return minOccurences > 0 ? [result, input] : [[], input]
 
-    return map(manyN(parser, { minOccurences: minOccurences - 1, maxOccurences: maxOccurences - 1 }), otherResults => [
-      result,
-      ...otherResults,
-    ])(rest)
+    return map(
+      manyN(parser, { minOccurences: minOccurences - 1, maxOccurences: maxOccurences - 1 }),
+      otherResults => [result, ...otherResults]
+    )(rest)
   }
 
 const many = manyN
 const many0 = many
 
-const many1 = <A>(parser: Parser<A>, { maxOccurences = Infinity }: ManyOccurencesType = {}): Parser<A[]> =>
-  manyN(parser, { minOccurences: 1, maxOccurences })
+const many1 = <A>(
+  parser: Parser<A>,
+  { maxOccurences = Infinity }: ManyOccurencesType = {}
+): Parser<A[]> => manyN(parser, { minOccurences: 1, maxOccurences })
 
-const many2 = <A>(parser: Parser<A>, { maxOccurences = Infinity }: ManyOccurencesType = {}): Parser<A[]> =>
-  manyN(parser, { minOccurences: 2, maxOccurences })
+const many2 = <A>(
+  parser: Parser<A>,
+  { maxOccurences = Infinity }: ManyOccurencesType = {}
+): Parser<A[]> => manyN(parser, { minOccurences: 2, maxOccurences })
 
 const empty: Parser<EmptyString> = input => ['', input]
 
@@ -121,8 +141,11 @@ const precededBy = <A, B>(parserBefore: Parser<A>, parser: Parser<B>): Parser<B>
 const succeededBy = <A, B>(parser: Parser<A>, parserAfter: Parser<B>): Parser<A> =>
   map(and(parser, parserAfter), ([result, _]) => result)
 
-const delimitedBy = <A, B, C>(parserBefore: Parser<A>, parser: Parser<B>, parserAfter: Parser<C>): Parser<B> =>
-  precededBy(parserBefore, succeededBy(parser, parserAfter))
+const delimitedBy = <A, B, C>(
+  parserBefore: Parser<A>,
+  parser: Parser<B>,
+  parserAfter: Parser<C>
+): Parser<B> => precededBy(parserBefore, succeededBy(parser, parserAfter))
 // map(and3(parserBefore, parser, parserAfter), ([_, result, __]) => result)
 
 const surroundedBy = <A, B>(parserBeforeAndAfter: Parser<A>, parser: Parser<B>): Parser<B> =>
@@ -208,7 +231,10 @@ const natural = map(precededBy(optional(plus), digits), digs =>
   digs.reduce((acc, dig, i) => acc + dig * BASE_10 ** (digs.length - (i + 1)), 0)
 )
 
-const integer = map(and(optional(sign), natural), ([signChar, nat]) => (signChar === MINUS_SIGN ? -1 : 1) * nat)
+const integer = map(
+  and(optional(sign), natural),
+  ([signChar, nat]) => (signChar === MINUS_SIGN ? -1 : 1) * nat
+)
 
 const naturalGreaterThanZero: Parser<number> = input => {
   const [result, rest] = natural(input)
@@ -221,7 +247,8 @@ const naturalGreaterThanZero: Parser<number> = input => {
 
 const float = map(
   and(integer, precededBy(period, natural)),
-  ([int, nat]) => int + (nat === 0 ? 0 : (Math.sign(int) * nat) / BASE_10 ** Math.trunc(Math.log10(nat) + 1))
+  ([int, nat]) =>
+    int + (nat === 0 ? 0 : (Math.sign(int) * nat) / BASE_10 ** Math.trunc(Math.log10(nat) + 1))
 )
 
 const numeric = or(float, integer)
@@ -250,10 +277,22 @@ export type OperatorType =
   | typeof DIVIDE
   | typeof EXPONENTIATE
   | typeof EXPONENTIATE_ALT
+
+type BinaryOperationType = {
+  type: 'binaryOperation'
+  left: ExpressionType
+  operator: OperatorType
+  right: ExpressionType
+}
+type NumericType = { type: 'numeric'; value: number }
+type ReferenceType = { type: 'reference'; ref: RefType }
+type ParenthesizedExpressionType = { type: 'parenthesizedExpression'; expr: ExpressionType }
+
 export type ExpressionType =
-  | (RefType | number) // Leaf nodes
-  | [ExpressionType, OperatorType, ExpressionType]
-  | [typeof OPEN_PARENS, ExpressionType, typeof CLOSE_PARENS]
+  | BinaryOperationType
+  | NumericType
+  | ReferenceType
+  | ParenthesizedExpressionType
 
 // https://stackoverflow.com/questions/2969561/how-to-parse-mathematical-expressions-involving-parentheses
 //
@@ -266,18 +305,23 @@ export type ExpressionType =
 // const factor = or(operand, delimitedBy(openParens, expression, closeParens))
 // const expression = additionSubtractionTerm
 
-const optionallySigned = <A>(parser: Parser<A>) =>
-  map(and(optional(sign), parser), ([signChar, result]) =>
-    signChar === MINUS_SIGN ? ([-1, MULTIPLY, result] as const) : result
-  )
+// const optionallySigned = <A>(parser: Parser<A>) =>
+//   map(and(optional(sign), parser), ([signChar, result]) =>
+//     signChar === MINUS_SIGN ? ([-1, MULTIPLY, result] as const) : result
+//   )
 
-const ref = concat(map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()]))
-
-const operand = or(numeric, optionallySigned(ref))
+const ref = concat(
+  map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()])
+)
 
 const additiveTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    and3(multiplicativeTerm, or(add, subtract), additiveTerm),
+    map(and3(multiplicativeTerm, or(add, subtract), additiveTerm), ([left, operator, right]) => ({
+      type: 'binaryOperation',
+      left,
+      operator,
+      right,
+    })),
     multiplicativeTerm
   )(input) as ParserResult<ExpressionType>
 
@@ -291,14 +335,27 @@ const additiveTerm: Parser<ExpressionType> = input => {
   // 3) our parser is right-recursive (so will effectively evaluate from right to left)
   //
   // replace `a - b` by `a + (-b)`.
-  if (Array.isArray(result) && result[1] === SUBTRACT && Array.isArray(result[2])) {
-    result[1] = ADD
+  if (
+    result.type === 'binaryOperation' &&
+    result.operator === SUBTRACT &&
+    (result.right.type === 'binaryOperation' || result.right.type === 'parenthesizedExpression')
+  ) {
+    result.operator = ADD
 
-    if (result[2][0] === OPEN_PARENS && result[2][2] === CLOSE_PARENS) {
-      result[2] = [-1, MULTIPLY, result[2][1]]
-    } else {
-      result[2][0] = [-1, MULTIPLY, result[2][0]]
-    }
+    if (result.right.type === 'parenthesizedExpression')
+      result.right = {
+        type: 'binaryOperation',
+        left: { type: 'numeric', value: -1 },
+        operator: MULTIPLY,
+        right: result.right.expr,
+      }
+    else
+      result.right.left = {
+        type: 'binaryOperation',
+        left: { type: 'numeric', value: -1 },
+        operator: MULTIPLY,
+        right: result.right.left,
+      }
   }
 
   return [result, rest]
@@ -306,7 +363,15 @@ const additiveTerm: Parser<ExpressionType> = input => {
 
 const multiplicativeTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    and3(exponentialTerm, or(multiply, divided), multiplicativeTerm),
+    map(
+      and3(exponentialTerm, or(multiply, divided), multiplicativeTerm),
+      ([left, operator, right]) => ({
+        type: 'binaryOperation',
+        left,
+        operator,
+        right,
+      })
+    ),
     exponentialTerm
   )(input) as ParserResult<ExpressionType>
 
@@ -320,23 +385,82 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
   // 3) our parser is right-recursive (so will effectively evaluate from right to left)
   //
   // replace `a / b` by `a * (1 / b)`.
-  if (Array.isArray(result) && result[1] === DIVIDE && Array.isArray(result[2])) {
-    result[1] = MULTIPLY
+  if (
+    result.type === 'binaryOperation' &&
+    result.operator === DIVIDE &&
+    (result.right.type === 'binaryOperation' || result.right.type === 'parenthesizedExpression')
+  ) {
+    result.operator = MULTIPLY
 
-    if (result[2][0] === OPEN_PARENS && result[2][2] === CLOSE_PARENS) {
-      result[2] = [1, DIVIDE, result[2][1]]
-    } else {
-      result[2][0] = [1, DIVIDE, result[2][0]]
-    }
+    if (result.right.type === 'parenthesizedExpression')
+      result.right = {
+        type: 'binaryOperation',
+        left: { type: 'numeric', value: 1 },
+        operator: DIVIDE,
+        right: result.right.expr,
+      }
+    else
+      result.right.left = {
+        type: 'binaryOperation',
+        left: { type: 'numeric', value: 1 },
+        operator: DIVIDE,
+        right: result.right.left,
+      }
   }
 
   return [result, rest]
 }
 
 const exponentialTerm: Parser<ExpressionType> = input =>
-  or(and3(factor, exponentiate, exponentialTerm), factor)(input) as ParserResult<ExpressionType>
+  or(
+    map(and3(factor, exponentiate, exponentialTerm), ([left, operator, right]) => ({
+      type: 'binaryOperation',
+      left,
+      operator,
+      right,
+    })),
+    factor
+  )(input) as ParserResult<ExpressionType>
 
-const factor = or(operand, optionallySigned(and3(openParens, additiveTerm, closeParens)))
+// TODO: rewrite `optionallySigned` and factor out code below.
+const operand = or(
+  map(numeric, value => ({ type: 'numeric', value })),
+  map(and(optional(sign), ref), ([signChar, ref]) => {
+    const defaultRef = { type: 'reference', ref }
+
+    return signChar === '-'
+      ? {
+          type: 'binaryOperation',
+          left: { type: 'numeric', value: -1 },
+          operator: MULTIPLY,
+          right: defaultRef,
+        }
+      : defaultRef
+  })
+)
+
+// TODO: rewrite `optionallySigned` and factor out code below.
+const factor = or(
+  operand,
+  map(
+    and(optional(sign), delimitedBy(openParens, additiveTerm, closeParens)),
+    ([signChar, expr]) => {
+      const defaultExpr = {
+        type: 'parenthesizedExpression',
+        expr,
+      }
+
+      return signChar === '-'
+        ? {
+            type: 'binaryOperation',
+            left: { type: 'numeric', value: -1 },
+            operator: MULTIPLY,
+            right: defaultExpr,
+          }
+        : defaultExpr
+    }
+  )
+)
 
 const expression = additiveTerm
 

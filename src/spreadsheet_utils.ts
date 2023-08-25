@@ -1,13 +1,10 @@
 import {
   ADD,
-  CLOSE_PARENS,
   DIVIDE,
   EXPONENTIATE,
   EXPONENTIATE_ALT,
   ExpressionType,
   MULTIPLY,
-  OPEN_PARENS,
-  OperatorType,
   SUBTRACT,
   formula,
   isError,
@@ -129,40 +126,43 @@ const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
 }
 
 const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
-  if (typeof expr === 'number')
-    // Plain number
-    return expr
-  else if (typeof expr === 'string')
-    // Ref
-    return findOrCreateAndEvaluateCell(sheet, expr.toUpperCase())
-  else if (Array.isArray(expr)) {
-    // [ExpressionType, OperatorType, ExpressionType] | ['(', ExpressionType, ')']
-    const [left, middle, right] = expr // Should be typed as [ExpressionType | '(', OperatorType | ExpressionType, ExpressionType | ')']
+  switch (expr.type) {
+    case 'numeric':
+      return expr.value
 
-    if (left === OPEN_PARENS && right === CLOSE_PARENS) return evaluateExpression(sheet, middle)
+    case 'reference':
+      return findOrCreateAndEvaluateCell(sheet, expr.ref.toUpperCase())
 
-    const leftOperand = evaluateExpression(sheet, left)
-    const rightOperand = evaluateExpression(sheet, right)
-    const operator = middle as OperatorType
+    case 'parenthesizedExpression':
+      return evaluateExpression(sheet, expr.expr)
 
-    switch (operator) {
-      case ADD:
-        return leftOperand + rightOperand
-      case SUBTRACT:
-        return leftOperand - rightOperand
-      case MULTIPLY:
-        return leftOperand * rightOperand
-      case DIVIDE:
-        return leftOperand / rightOperand
-      case EXPONENTIATE:
-      case EXPONENTIATE_ALT:
-        return leftOperand ** rightOperand
-      default: {
-        const _exhaustiveCheck: never = operator
-        throw new Error(`Invalid operator ${middle}`)
+    case 'binaryOperation':
+      const left = evaluateExpression(sheet, expr.left)
+      const right = evaluateExpression(sheet, expr.right)
+
+      switch (expr.operator) {
+        case ADD:
+          return left + right
+        case SUBTRACT:
+          return left - right
+        case MULTIPLY:
+          return left * right
+        case DIVIDE:
+          return left / right
+        case EXPONENTIATE:
+        case EXPONENTIATE_ALT:
+          return left ** right
+        default: {
+          const _exhaustiveCheck1: never = expr.operator
+          throw new Error(`Invalid operator ${expr.operator}`)
+        }
       }
+
+    default: {
+      const _exhaustiveCheck2: never = expr
+      throw new Error('Invalid expression type')
     }
-  } else throw new Error(`Invalid type '${typeof expr}' for expression '${expr}'`)
+  }
 }
 
 export const evaluateFormula = (sheet: SheetType, value: string, ref?: RefType): number => {
@@ -465,4 +465,4 @@ export const inChunksOf = <T>(collection: T[], size: number): T[][] => {
   return results
 }
 
-// const p = (value: string) => console.log(Deno.inspect(value, { depth: 999 }))
+// const p = (value: string) => console.log(Deno.inspect(value, { depth: 999, colors: true }))
