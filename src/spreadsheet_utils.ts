@@ -9,7 +9,13 @@ import {
   formula,
   isError,
 } from './parser_combinators.ts'
-import { ComputedSignalKind, IComputedSignalWrapper, computed, times, signalReplacerFn } from './signals.ts'
+import {
+  ComputedSignalKind,
+  IComputedSignalWrapper,
+  computed,
+  times,
+  signalReplacerFn,
+} from './signals.ts'
 
 const ALPHABET_LENGTH = 'Z'.charCodeAt(0) - 'A'.charCodeAt(0) + 1
 
@@ -59,7 +65,11 @@ export const colIndexFromSingleLetter = (colSingleRef: LetterType): number => {
 export const colIndexFromLabel = (colRef: ColRefType): number => {
   return colRef
     .split('')
-    .reduce((acc, letter, i) => acc + colIndexFromSingleLetter(letter) * ALPHABET_LENGTH ** (colRef.length - i - 1), 0)
+    .reduce(
+      (acc, letter, i) =>
+        acc + colIndexFromSingleLetter(letter) * ALPHABET_LENGTH ** (colRef.length - i - 1),
+      0
+    )
 }
 
 // Converts 1 to 'A', 2 to 'B'... 26 to 'Z'.
@@ -125,6 +135,24 @@ const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
   return sheet.cells[ref].signalWrapper()
 }
 
+const AGGREGATION_FUNCTIONS = {
+  sum: function (refs: number[][]) {
+    return refs.flat(2).reduce((acc, ref) => acc + ref, 0)
+  },
+  count: function (refs: number[][]) {
+    return refs.flat(2).length
+  },
+  avg: function (refs: number[][]) {
+    return this.sum(refs) / this.count(refs)
+  },
+  rows: function (refs: number[][]) {
+    return refs.length
+  },
+  cols: function (refs: number[][]) {
+    return (refs[0] ?? []).length
+  },
+}
+
 const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
   switch (expr.type) {
     case 'numeric':
@@ -156,6 +184,19 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
           const _exhaustiveCheck1: never = expr.operator
           throw new Error(`Invalid operator ${expr.operator}`)
         }
+      }
+
+    case 'aggregationFnCall':
+      const fnName = expr.name.toLocaleLowerCase()
+
+      const refsValues = expandRange(expr.range.from, expr.range.to).map(row =>
+        row.map(ref => findOrCreateAndEvaluateCell(sheet, ref.toUpperCase()))
+      )
+
+      if (fnName in AGGREGATION_FUNCTIONS) {
+        return AGGREGATION_FUNCTIONS[fnName as keyof typeof AGGREGATION_FUNCTIONS](refsValues)
+      } else {
+        throw new Error(`Invalid aggregation function '${fnName}' called.`)
       }
 
     default: {
@@ -309,7 +350,9 @@ export const sheetAsTable = (sheet: SheetType, padding = 64) => {
     '\n' +
     results
       .map(row =>
-        row.map((col, i) => truncate(col.toString(), i === 0 || i === row.length - 1 ? 4 : padding)).join(' | ')
+        row
+          .map((col, i) => truncate(col.toString(), i === 0 || i === row.length - 1 ? 4 : padding))
+          .join(' | ')
       )
       .join('\n') +
     '\n'
@@ -324,7 +367,8 @@ const generateCellColsRows = (
   baseCol: number
 ) => {
   const { row, col } = asCoords(initialRef)
-  const value = row === baseRow || col === baseCol ? initialValue : `=${colAsLabel(col - 1)}${row - 1}+1`
+  const value =
+    row === baseRow || col === baseCol ? initialValue : `=${colAsLabel(col - 1)}${row - 1}+1`
 
   const verticalResult = sequenceReduce(
     side - 1,
@@ -355,13 +399,20 @@ const generateCellColsRows = (
   return { ...(verticalResult as object), ...(horizontalResult as object) }
 }
 
-export const generateCellSquares = (side: number, initialRef: RefType, initialValue: CellValueType): SheetDataType => {
+export const generateCellSquares = (
+  side: number,
+  initialRef: RefType,
+  initialValue: CellValueType
+): SheetDataType => {
   const { row, col } = asCoords(initialRef)
 
   return sequenceReduce(
     side,
     (acc: object, i: number): object =>
-      Object.assign(acc, generateCellColsRows(side - i, asRef([i + row, i + col]), initialValue, row, col)),
+      Object.assign(
+        acc,
+        generateCellColsRows(side - i, asRef([i + row, i + col]), initialValue, row, col)
+      ),
     {}
   )
 }
@@ -421,12 +472,15 @@ export function generateSpiralSequence(
 ): SheetDataType {
   let currentRef = Object.keys(initialCells[initialCells.length - 1])[0]
 
-  const previousRefs: RefType[] = initialCells.slice(0, initialCells.length - 1).flatMap(Object.keys)
+  const previousRefs: RefType[] = initialCells
+    .slice(0, initialCells.length - 1)
+    .flatMap(Object.keys)
   let direction = initialDirection
   let stepsToWalkInDirection = firstSegmentSize
   let stepsWalkedInDirection = initialCells.length
 
-  const count = sequenceReduce(firstSegmentSize - 1, (acc, i) => acc + (i + 1), 0) - initialCells.length + 2
+  const count =
+    sequenceReduce(firstSegmentSize - 1, (acc, i) => acc + (i + 1), 0) - initialCells.length + 2
 
   return sequenceReduce(
     count - 1,

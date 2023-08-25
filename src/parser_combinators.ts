@@ -222,6 +222,7 @@ const string = concat(
 
 const wordChar = map(or3(letter, digit, underscore), res => res.toString())
 const word = concat(many1(wordChar))
+const identifier = word
 
 const sign = or(plus, minus)
 
@@ -287,12 +288,18 @@ type BinaryOperationType = {
 type NumericType = { type: 'numeric'; value: number }
 type ReferenceType = { type: 'reference'; ref: RefType }
 type ParenthesizedExpressionType = { type: 'parenthesizedExpression'; expr: ExpressionType }
+type AggregationFnCallType = {
+  type: 'aggregationFnCall'
+  name: string
+  range: { from: RefType; to: RefType }
+}
 
 export type ExpressionType =
   | BinaryOperationType
   | NumericType
   | ReferenceType
   | ParenthesizedExpressionType
+  | AggregationFnCallType
 
 // https://stackoverflow.com/questions/2969561/how-to-parse-mathematical-expressions-involving-parentheses
 //
@@ -304,11 +311,6 @@ export type ExpressionType =
 //   or(and3(factor, toThePowerOf, exponentiationTerm), factor)(input)
 // const factor = or(operand, delimitedBy(openParens, expression, closeParens))
 // const expression = additionSubtractionTerm
-
-// const optionallySigned = <A>(parser: Parser<A>) =>
-//   map(and(optional(sign), parser), ([signChar, result]) =>
-//     signChar === MINUS_SIGN ? ([-1, MULTIPLY, result] as const) : result
-//   )
 
 const ref = concat(
   map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()])
@@ -422,6 +424,11 @@ const exponentialTerm: Parser<ExpressionType> = input =>
     factor
   )(input) as ParserResult<ExpressionType>
 
+// const optionallySigned = <A>(parser: Parser<A>) =>
+//   map(and(optional(sign), parser), ([signChar, result]) =>
+//     signChar === MINUS_SIGN ? ([-1, MULTIPLY, result] as const) : result
+//   )
+
 // TODO: rewrite `optionallySigned` and factor out code below.
 const operand = or(
   map(numeric, value => ({ type: 'numeric', value })),
@@ -440,27 +447,38 @@ const operand = or(
 )
 
 // TODO: rewrite `optionallySigned` and factor out code below.
-const factor = or(
-  operand,
-  map(
-    and(optional(sign), delimitedBy(openParens, additiveTerm, closeParens)),
-    ([signChar, expr]) => {
-      const defaultExpr = {
-        type: 'parenthesizedExpression',
-        expr,
-      }
-
-      return signChar === '-'
-        ? {
-            type: 'binaryOperation',
-            left: { type: 'numeric', value: -1 },
-            operator: MULTIPLY,
-            right: defaultExpr,
-          }
-        : defaultExpr
+const parenthesizedExpression = map(
+  and(optional(sign), delimitedBy(openParens, additiveTerm, closeParens)),
+  ([signChar, expr]) => {
+    const defaultExpr = {
+      type: 'parenthesizedExpression',
+      expr,
     }
-  )
+
+    return signChar === '-'
+      ? {
+          type: 'binaryOperation',
+          left: { type: 'numeric', value: -1 },
+          operator: MULTIPLY,
+          right: defaultExpr,
+        }
+      : defaultExpr
+  }
 )
+
+const colon = char(':')
+const range = and(succeededBy(ref, colon), ref)
+
+const aggregationFnCall = map(
+  and(identifier, delimitedBy(openParens, range, closeParens)),
+  ([name, [from, to]]) => ({
+    type: 'aggregationFnCall',
+    name,
+    range: { from, to },
+  })
+)
+
+const factor = or3(operand, parenthesizedExpression, aggregationFnCall)
 
 const expression = additiveTerm
 
