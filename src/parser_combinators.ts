@@ -412,11 +412,9 @@ const exponentialTerm: Parser<ExpressionType> = input =>
     factor
   )(input) as ParserResult<ExpressionType>
 
-const optionallySigned = <A>(parser: Parser<A>) =>
+const optionallySigned = <A extends ExpressionType>(parser: Parser<A>) =>
   map(and(optional(sign), parser), ([signChar, result]) =>
-    signChar === MINUS_SIGN
-      ? createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, result as ExpressionType)
-      : result
+    signChar === MINUS_SIGN ? createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, result) : result
   )
 
 const operand = or(
