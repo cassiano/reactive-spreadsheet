@@ -333,13 +333,8 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
   return [result, rest]
 }
 
-const exponentialTerm: Parser<ExpressionType> = input => {
-  const [result, rest] = or(and3(factor, exponentiate, exponentialTerm), factor)(input) as ParserResult<ExpressionType>
-
-  if (isError(result)) return [result, input]
-
-  return [result, rest]
-}
+const exponentialTerm: Parser<ExpressionType> = input =>
+  or(and3(factor, exponentiate, exponentialTerm), factor)(input) as ParserResult<ExpressionType>
 
 const factor = or(operand, optionallySigned(and3(openParens, additiveTerm, closeParens)))
 
