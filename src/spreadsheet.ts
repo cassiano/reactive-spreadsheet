@@ -251,7 +251,7 @@ const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects
 // )
 
 // Reversed spiral sequence.
-const REVERSED_SEQUENCE_TERMS = 10
+const REVERSED_SEQUENCE_TERMS = 20
 const sheetData: SheetDataType = generateSpiralSequence(
   REVERSED_SEQUENCE_TERMS,
   'south',

@@ -319,14 +319,26 @@ const ref = concat(
 const NUMERIC_1: NumericType = { type: 'numeric', value: 1 }
 const NUMERIC_MINUS_1: NumericType = { type: 'numeric', value: -1 }
 
+const createBinaryOperation = (
+  left: ExpressionType,
+  operator: OperatorType,
+  right: ExpressionType
+) =>
+  ({
+    type: 'binaryOperation',
+    left,
+    operator,
+    right,
+  } as BinaryOperationType)
+
+const mapToBinaryOperation = (parser: Parser<[ExpressionType, OperatorType, ExpressionType]>) =>
+  map(parser, ([left, operator, right]) => createBinaryOperation(left, operator, right))
+
 const additiveTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    map(and3(multiplicativeTerm, or(add, subtract), additiveTerm), ([left, operator, right]) => ({
-      type: 'binaryOperation',
-      left,
-      operator,
-      right,
-    })),
+    mapToBinaryOperation(
+      and3(multiplicativeTerm, or(add, subtract) as Parser<OperatorType>, additiveTerm)
+    ),
     multiplicativeTerm
   )(input) as ParserResult<ExpressionType>
 
@@ -347,20 +359,11 @@ const additiveTerm: Parser<ExpressionType> = input => {
   ) {
     result.operator = ADD
 
-    if (result.right.type === 'parenthesizedExpression')
-      result.right = {
-        type: 'binaryOperation',
-        left: NUMERIC_MINUS_1,
-        operator: MULTIPLY,
-        right: result.right.expr,
-      }
-    else
-      result.right.left = {
-        type: 'binaryOperation',
-        left: NUMERIC_MINUS_1,
-        operator: MULTIPLY,
-        right: result.right.left,
-      }
+    if (result.right.type === 'parenthesizedExpression') {
+      result.right = createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, result.right.expr)
+    } else {
+      result.right.left = createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, result.right.left)
+    }
   }
 
   return [result, rest]
@@ -368,14 +371,8 @@ const additiveTerm: Parser<ExpressionType> = input => {
 
 const multiplicativeTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
-    map(
-      and3(exponentialTerm, or(multiply, divided), multiplicativeTerm),
-      ([left, operator, right]) => ({
-        type: 'binaryOperation',
-        left,
-        operator,
-        right,
-      })
+    mapToBinaryOperation(
+      and3(exponentialTerm, or(multiply, divided) as Parser<OperatorType>, multiplicativeTerm)
     ),
     exponentialTerm
   )(input) as ParserResult<ExpressionType>
@@ -397,20 +394,11 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
   ) {
     result.operator = MULTIPLY
 
-    if (result.right.type === 'parenthesizedExpression')
-      result.right = {
-        type: 'binaryOperation',
-        left: NUMERIC_1,
-        operator: DIVIDE,
-        right: result.right.expr,
-      }
-    else
-      result.right.left = {
-        type: 'binaryOperation',
-        left: NUMERIC_1,
-        operator: DIVIDE,
-        right: result.right.left,
-      }
+    if (result.right.type === 'parenthesizedExpression') {
+      result.right = createBinaryOperation(NUMERIC_1, DIVIDE, result.right.expr)
+    } else {
+      result.right.left = createBinaryOperation(NUMERIC_1, DIVIDE, result.right.left)
+    }
   }
 
   return [result, rest]
@@ -418,12 +406,9 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
 
 const exponentialTerm: Parser<ExpressionType> = input =>
   or(
-    map(and3(factor, exponentiate, exponentialTerm), ([left, operator, right]) => ({
-      type: 'binaryOperation',
-      left,
-      operator,
-      right,
-    })),
+    mapToBinaryOperation(
+      and3(factor as Parser<ExpressionType>, exponentiate as Parser<OperatorType>, exponentialTerm)
+    ),
     factor
   )(input) as ParserResult<ExpressionType>
 
@@ -439,12 +424,7 @@ const operand = or(
     const defaultRef: ReferenceType = { type: 'reference', ref }
 
     return signChar === MINUS_SIGN
-      ? ({
-          type: 'binaryOperation',
-          left: NUMERIC_MINUS_1,
-          operator: MULTIPLY,
-          right: defaultRef,
-        } as BinaryOperationType)
+      ? createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, defaultRef)
       : defaultRef
   })
 )
@@ -459,12 +439,7 @@ const parenthesizedExpression = map(
     }
 
     return signChar === MINUS_SIGN
-      ? ({
-          type: 'binaryOperation',
-          left: NUMERIC_MINUS_1,
-          operator: MULTIPLY,
-          right: defaultExpr,
-        } as BinaryOperationType)
+      ? createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, defaultExpr)
       : defaultExpr
   }
 )
