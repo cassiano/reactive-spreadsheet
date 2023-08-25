@@ -412,36 +412,23 @@ const exponentialTerm: Parser<ExpressionType> = input =>
     factor
   )(input) as ParserResult<ExpressionType>
 
-// const optionallySigned = <A>(parser: Parser<A>) =>
-//   map(and(optional(sign), parser), ([signChar, result]) =>
-//     signChar === MINUS_SIGN ? ([-1, MULTIPLY, result] as const) : result
-//   )
+const optionallySigned = <A>(parser: Parser<A>) =>
+  map(and(optional(sign), parser), ([signChar, result]) =>
+    signChar === MINUS_SIGN
+      ? createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, result as ExpressionType)
+      : result
+  )
 
-// TODO: rewrite `optionallySigned` and factor out code below.
 const operand = or(
   map(numeric, value => ({ type: 'numeric', value })),
-  map(and(optional(sign), ref), ([signChar, ref]) => {
-    const defaultRef: ReferenceType = { type: 'reference', ref }
-
-    return signChar === MINUS_SIGN
-      ? createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, defaultRef)
-      : defaultRef
-  })
+  optionallySigned(map(ref, ref => ({ type: 'reference', ref })))
 )
 
-// TODO: rewrite `optionallySigned` and factor out code below.
-const parenthesizedExpression = map(
-  and(optional(sign), delimitedBy(openParens, additiveTerm, closeParens)),
-  ([signChar, expr]) => {
-    const defaultExpr: ParenthesizedExpressionType = {
-      type: 'parenthesizedExpression',
-      expr,
-    }
-
-    return signChar === MINUS_SIGN
-      ? createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, defaultExpr)
-      : defaultExpr
-  }
+const parenthesizedExpression = optionallySigned(
+  map(delimitedBy(openParens, additiveTerm, closeParens), expr => ({
+    type: 'parenthesizedExpression',
+    expr,
+  }))
 )
 
 const colon = char(':')
