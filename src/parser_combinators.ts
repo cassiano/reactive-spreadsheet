@@ -438,7 +438,7 @@ const operand = or(
   map(and(optional(sign), ref), ([signChar, ref]) => {
     const defaultRef: ReferenceType = { type: 'reference', ref }
 
-    return signChar === '-'
+    return signChar === MINUS_SIGN
       ? ({
           type: 'binaryOperation',
           left: NUMERIC_MINUS_1,
@@ -458,7 +458,7 @@ const parenthesizedExpression = map(
       expr,
     }
 
-    return signChar === '-'
+    return signChar === MINUS_SIGN
       ? ({
           type: 'binaryOperation',
           left: NUMERIC_MINUS_1,
