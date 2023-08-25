@@ -1,4 +1,4 @@
-import { RefType } from './spreadsheet_utils'
+import { RefType } from './spreadsheet_utils.ts'
 
 const error = (msg: string) => new Error(msg)
 

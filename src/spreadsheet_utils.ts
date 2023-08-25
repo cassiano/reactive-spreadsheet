@@ -11,8 +11,8 @@ import {
   SUBTRACT,
   formula,
   isError,
-} from './parser_combinators'
-import { ComputedSignalKind, IComputedSignalWrapper, computed, times, signalReplacerFn } from './signals'
+} from './parser_combinators.ts'
+import { ComputedSignalKind, IComputedSignalWrapper, computed, times, signalReplacerFn } from './signals.ts'
 
 const ALPHABET_LENGTH = 'Z'.charCodeAt(0) - 'A'.charCodeAt(0) + 1
 
