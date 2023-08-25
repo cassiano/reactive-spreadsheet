@@ -162,7 +162,12 @@ export abstract class BaseSignal<T> implements IBaseSignal<T> {
 
     this.processInContext(observer)
 
-    debug(() => `Reading value ${this.value} of signal ${this.label} from signal ${BaseSignal.label(observer)}`)
+    debug(
+      () =>
+        `Reading value ${this.value} of signal ${this.label} from signal ${BaseSignal.label(
+          observer
+        )}`
+    )
 
     if (observer !== undefined) {
       if (!observer.hasSubject(this)) observer.addSubject(this)
@@ -191,7 +196,9 @@ export abstract class BaseSignal<T> implements IBaseSignal<T> {
     debug(() => `Removing observer ${BaseSignal.label(observer)} from ${this.label}`)
 
     if (!this.observers.delete(observer))
-      throw new Error(`Error when removing observer ${BaseSignal.label(observer)} from ${this.label}`)
+      throw new Error(
+        `Error when removing observer ${BaseSignal.label(observer)} from ${this.label}`
+      )
 
     if (removeRelatedSubject) observer.removeSubject(this, false)
   }
@@ -207,7 +214,11 @@ export abstract class BaseSignal<T> implements IBaseSignal<T> {
   }
 
   expireDescendantObservers(): void {
-    debug(() => this.observers.size > 0 && `Expiring ${this.label}'s observers: ${BaseSignal.labels(this.observers)}`)
+    debug(
+      () =>
+        this.observers.size > 0 &&
+        `Expiring ${this.label}'s observers: ${BaseSignal.labels(this.observers)}`
+    )
 
     this.observers.forEach(observer => observer.expire())
   }
@@ -216,7 +227,9 @@ export abstract class BaseSignal<T> implements IBaseSignal<T> {
     debug(
       () =>
         breadcrumbs.length > 0 &&
-        `hasDescendantEagerObservers()'s breadcrumbs for ${this.label}: ${BaseSignal.labels(breadcrumbs)}`
+        `hasDescendantEagerObservers()'s breadcrumbs for ${this.label}: ${BaseSignal.labels(
+          breadcrumbs
+        )}`
     )
 
     // Signal already visited/checked?
@@ -231,8 +244,12 @@ export abstract class BaseSignal<T> implements IBaseSignal<T> {
     // Check if there is any direct eager observer or, if none found, if there is any direct lazy observer
     // that, acting as a subject, has itself a direct or indirect eager observer.
     const found =
-      observersArray.some(observer => (observer as ComputedSignal<unknown>).kind === ComputedSignalKind.Eager) ||
-      observersArray.some(observer => (observer as unknown as ISubject).hasDescendantEagerObservers(breadcrumbs))
+      observersArray.some(
+        observer => (observer as ComputedSignal<unknown>).kind === ComputedSignalKind.Eager
+      ) ||
+      observersArray.some(observer =>
+        (observer as unknown as ISubject).hasDescendantEagerObservers(breadcrumbs)
+      )
 
     if (!found) breadcrumbs.push(this) // Notice our breadcrumbs set contains only negative/false matches.
 
@@ -243,12 +260,22 @@ export abstract class BaseSignal<T> implements IBaseSignal<T> {
   // Other methods //
   ///////////////////
 
-  static label(signal: ObserverPatternType | undefined, defaultLabel = '(non-reactive context) main') {
+  static label(
+    signal: ObserverPatternType | undefined,
+    defaultLabel = '(non-reactive context) main'
+  ) {
     return (signal as IBaseSignal<unknown>)?.label ?? defaultLabel
   }
 
-  static labels(signals: Set<ObserverPatternType> | ObserverPatternType[], separator = ', '): string {
-    return '[' + [...signals].map(signal => this.label(signal as IBaseSignal<unknown>)).join(separator) + ']'
+  static labels(
+    signals: Set<ObserverPatternType> | ObserverPatternType[],
+    separator = ', '
+  ): string {
+    return (
+      '[' +
+      [...signals].map(signal => this.label(signal as IBaseSignal<unknown>)).join(separator) +
+      ']'
+    )
   }
 }
 
@@ -260,7 +287,11 @@ export class ComputedSignal<T> extends BaseSignal<T> implements IComputedSignal<
   readonly defaultValue?: T
   readonly subjects: Set<ISubject> = new Set()
 
-  constructor(label: string, public valueFn: (previousValue?: T) => T, options: IComputedSignalOptions<T> = {}) {
+  constructor(
+    label: string,
+    public valueFn: (previousValue?: T) => T,
+    options: IComputedSignalOptions<T> = {}
+  ) {
     super(label)
 
     this.kind = options.kind ?? ComputedSignalKind.Lazy
@@ -282,9 +313,9 @@ export class ComputedSignal<T> extends BaseSignal<T> implements IComputedSignal<
       BaseSignal.executionContext.reset()
 
       throw new CircularDependencyError(
-        `Circular dependency detected when reading signal ${this.label} from signal ${BaseSignal.label(
-          observer as ComputedSignal<unknown>
-        )}`
+        `Circular dependency detected when reading signal ${
+          this.label
+        } from signal ${BaseSignal.label(observer as ComputedSignal<unknown>)}`
       )
     }
 
@@ -309,7 +340,9 @@ export class ComputedSignal<T> extends BaseSignal<T> implements IComputedSignal<
     })
 
     // Remove all (still) invalid subjects.
-    ;[...this.subjects].filter(subject => !subject.inUse).forEach(subject => this.removeSubject(subject))
+    ;[...this.subjects]
+      .filter(subject => !subject.inUse)
+      .forEach(subject => this.removeSubject(subject))
 
     // Restore the in-use values of *all* previous subjects, including removed ones.
     previousSubjectsInUseValues.forEach((inUse, subject) => {
@@ -375,7 +408,9 @@ export class ComputedSignal<T> extends BaseSignal<T> implements IComputedSignal<
 
   recalculateStillExpiredObservers(breadcrumbs: ComputedSignal<any>[] = []): void {
     debug(
-      () => this.observers.size > 0 && `Recalculating ${this.label}'s observers: ${BaseSignal.labels(this.observers)}`
+      () =>
+        this.observers.size > 0 &&
+        `Recalculating ${this.label}'s observers: ${BaseSignal.labels(this.observers)}`
     )
 
     // Signal already visited/checked?
@@ -451,13 +486,16 @@ export class WritableSignal<T> extends BaseSignal<T> {
 
     if (skipEqualityCheck || newValue !== this.value) {
       if (skipEqualityCheck)
-        debug(() => `Replacing the (already mutated) value of ${this.label}: ${JSON.stringify(this.value)}`)
+        debug(
+          () =>
+            `Replacing the (already mutated) value of ${this.label}: ${JSON.stringify(this.value)}`
+        )
       else
         debug(
           () =>
-            `Replacing the immutable value of ${this.label}: ${JSON.stringify(this.value)} -> ${JSON.stringify(
-              newValue
-            )}`
+            `Replacing the immutable value of ${this.label}: ${JSON.stringify(
+              this.value
+            )} -> ${JSON.stringify(newValue)}`
         )
 
       this.value = newValue
@@ -481,8 +519,10 @@ export const signal = function <T>(label: string, initialValue: T): IWritableSig
 
   // Simply delegate the set(), update() and mutate() methods to the signal.
   wrapper.set = (newValue: T) => signal.set(newValue)
-  wrapper.update = (newImmutableValueFn: (previousValue: T) => T) => signal.update(newImmutableValueFn)
-  wrapper.mutate = (newMutableValueFn: (previousValue: T) => void) => signal.mutate(newMutableValueFn)
+  wrapper.update = (newImmutableValueFn: (previousValue: T) => T) =>
+    signal.update(newImmutableValueFn)
+  wrapper.mutate = (newMutableValueFn: (previousValue: T) => void) =>
+    signal.mutate(newMutableValueFn)
 
   // Allow access to the underlying signal.
   wrapper.signal = signal
@@ -509,14 +549,20 @@ export const computed = function <T>(
   return wrapper
 }
 
-export const effect = <T>(label: string, fn: (previousValue?: T) => T, defaultValue?: T): IComputedSignal<T> =>
+export const effect = <T>(
+  label: string,
+  fn: (previousValue?: T) => T,
+  defaultValue?: T
+): IComputedSignal<T> =>
   computed(label, fn, { kind: ComputedSignalKind.Eager, defaultValue }).signal
 
 // https://tsplay.dev/Nr37Vm
-export const isComputedSignalWrapper = <T>(wrapper: SignalWrapperType<T>): wrapper is IComputedSignalWrapper<T> =>
-  wrapper.signal instanceof ComputedSignal
-export const isWritableSignalWrapper = <T>(wrapper: SignalWrapperType<T>): wrapper is IWritableSignalWrapper<T> =>
-  wrapper.signal instanceof WritableSignal
+export const isComputedSignalWrapper = <T>(
+  wrapper: SignalWrapperType<T>
+): wrapper is IComputedSignalWrapper<T> => wrapper.signal instanceof ComputedSignal
+export const isWritableSignalWrapper = <T>(
+  wrapper: SignalWrapperType<T>
+): wrapper is IWritableSignalWrapper<T> => wrapper.signal instanceof WritableSignal
 
 ////////////////////////
 // Helper functions 2 //
@@ -550,4 +596,5 @@ export const subjects = (computedSignalWrapper: IComputedSignalWrapper<any>) =>
 export const observers = (signalWrapper: SignalWrapperType<any>) =>
   [...signalWrapper.signal.observers].map(observer => BaseSignal.label(observer))
 
-export const times = <T>(n: number, fn: (index: number) => T): T[] => [...Array(n).keys()].map(i => fn(i))
+export const times = <T>(n: number, fn: (index: number) => T): T[] =>
+  [...Array(n).keys()].map(i => fn(i))
