@@ -290,7 +290,7 @@ type ReferenceType = { type: 'reference'; ref: RefType }
 type ParenthesizedExpressionType = { type: 'parenthesizedExpression'; expr: ExpressionType }
 type AggregationFnCallType = {
   type: 'aggregationFnCall'
-  name: string
+  fnName: string
   range: { from: RefType; to: RefType }
 }
 
@@ -315,6 +315,9 @@ export type ExpressionType =
 const ref = concat(
   map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()])
 )
+
+const NUMERIC_1: NumericType = { type: 'numeric', value: 1 }
+const NUMERIC_MINUS_1: NumericType = { type: 'numeric', value: -1 }
 
 const additiveTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
@@ -347,14 +350,14 @@ const additiveTerm: Parser<ExpressionType> = input => {
     if (result.right.type === 'parenthesizedExpression')
       result.right = {
         type: 'binaryOperation',
-        left: { type: 'numeric', value: -1 },
+        left: NUMERIC_MINUS_1,
         operator: MULTIPLY,
         right: result.right.expr,
       }
     else
       result.right.left = {
         type: 'binaryOperation',
-        left: { type: 'numeric', value: -1 },
+        left: NUMERIC_MINUS_1,
         operator: MULTIPLY,
         right: result.right.left,
       }
@@ -397,14 +400,14 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
     if (result.right.type === 'parenthesizedExpression')
       result.right = {
         type: 'binaryOperation',
-        left: { type: 'numeric', value: 1 },
+        left: NUMERIC_1,
         operator: DIVIDE,
         right: result.right.expr,
       }
     else
       result.right.left = {
         type: 'binaryOperation',
-        left: { type: 'numeric', value: 1 },
+        left: NUMERIC_1,
         operator: DIVIDE,
         right: result.right.left,
       }
@@ -433,15 +436,15 @@ const exponentialTerm: Parser<ExpressionType> = input =>
 const operand = or(
   map(numeric, value => ({ type: 'numeric', value })),
   map(and(optional(sign), ref), ([signChar, ref]) => {
-    const defaultRef = { type: 'reference', ref }
+    const defaultRef: ReferenceType = { type: 'reference', ref }
 
     return signChar === '-'
-      ? {
+      ? ({
           type: 'binaryOperation',
-          left: { type: 'numeric', value: -1 },
+          left: NUMERIC_MINUS_1,
           operator: MULTIPLY,
           right: defaultRef,
-        }
+        } as BinaryOperationType)
       : defaultRef
   })
 )
@@ -450,18 +453,18 @@ const operand = or(
 const parenthesizedExpression = map(
   and(optional(sign), delimitedBy(openParens, additiveTerm, closeParens)),
   ([signChar, expr]) => {
-    const defaultExpr = {
+    const defaultExpr: ParenthesizedExpressionType = {
       type: 'parenthesizedExpression',
       expr,
     }
 
     return signChar === '-'
-      ? {
+      ? ({
           type: 'binaryOperation',
-          left: { type: 'numeric', value: -1 },
+          left: NUMERIC_MINUS_1,
           operator: MULTIPLY,
           right: defaultExpr,
-        }
+        } as BinaryOperationType)
       : defaultExpr
   }
 )
@@ -471,11 +474,12 @@ const range = and(succeededBy(ref, colon), ref)
 
 const aggregationFnCall = map(
   and(identifier, delimitedBy(openParens, range, closeParens)),
-  ([name, [from, to]]) => ({
-    type: 'aggregationFnCall',
-    name,
-    range: { from, to },
-  })
+  ([fnName, [from, to]]) =>
+    ({
+      type: 'aggregationFnCall',
+      fnName,
+      range: { from, to },
+    } as AggregationFnCallType)
 )
 
 const factor = or3(operand, parenthesizedExpression, aggregationFnCall)

@@ -14,7 +14,7 @@ import {
   addCell,
   updateCellFormula,
   updateCellValue,
-  evaluateFormula,
+  findOrCreateAndEvaluateCell,
 } from './spreadsheet_utils'
 
 let shiftPressed: boolean = false
@@ -125,7 +125,7 @@ export const makeCellReactive = (
   effectVersion[ref] ??= 1
 
   effects[ref] = effect(`${ref}-updater-v${effectVersion[ref]++}`, () => {
-    const value = evaluateFormula(sheet, `=${ref}`)
+    const value = findOrCreateAndEvaluateCell(sheet, ref)
 
     debug(() => `Updating cell ${ref} with value ${value}`)
 

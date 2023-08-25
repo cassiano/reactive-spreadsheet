@@ -36,11 +36,12 @@ export type SheetCellType = string | number
 export type SheetDataType = {
   [ref: RefType]: SheetCellType
 }
+export type FormulaType = {
+  rawValue: string
+  parsedValue?: ExpressionType
+}
 export type CellType = {
-  formula?: {
-    rawValue: string
-    parsedValue?: ExpressionType
-  }
+  formula?: FormulaType
   signalWrapper: IComputedSignalWrapper<number>
 }
 export type SheetType = {
@@ -129,7 +130,7 @@ export const expandRange = (from: RefType, to: RefType) => {
   )
 }
 
-const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
+export const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
   if (!(ref in sheet.cells)) addCell(sheet, ref, () => 0)
 
   return sheet.cells[ref].signalWrapper()
@@ -150,6 +151,12 @@ const AGGREGATION_FUNCTIONS = {
   },
   cols: function (refs: number[][]) {
     return (refs[0] ?? []).length
+  },
+  max: function (refs: number[][]) {
+    return Math.max(...refs.flat(2))
+  },
+  min: function (refs: number[][]) {
+    return Math.min(...refs.flat(2))
   },
 }
 
@@ -187,13 +194,14 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
       }
 
     case 'aggregationFnCall':
-      const fnName = expr.name.toLocaleLowerCase()
+      const fnName = expr.fnName.toLocaleLowerCase()
 
       const refsValues = expandRange(expr.range.from, expr.range.to).map(row =>
         row.map(ref => findOrCreateAndEvaluateCell(sheet, ref.toUpperCase()))
       )
 
       if (fnName in AGGREGATION_FUNCTIONS) {
+        // TODO: Review code below.
         return AGGREGATION_FUNCTIONS[fnName as keyof typeof AGGREGATION_FUNCTIONS](refsValues)
       } else {
         throw new Error(`Invalid aggregation function '${fnName}' called.`)
@@ -206,21 +214,15 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
   }
 }
 
-export const evaluateFormula = (sheet: SheetType, value: string, ref?: RefType): number => {
+export const evaluateFormula = (sheet: SheetType, value: string, ref: RefType): number => {
   let expression: ExpressionType | Error
-  let useCachedVersion = false
-  let cell: CellType | undefined
-
-  if (ref !== undefined && ref in sheet.cells) {
-    cell = sheet.cells[ref]
-
-    useCachedVersion = cell.formula?.parsedValue !== undefined
-  }
+  const cell: CellType = sheet.cells[ref]
+  const useCachedVersion = cell.formula?.parsedValue !== undefined
 
   if (useCachedVersion) {
     // log(`Using cached formula for ${ref} cell...`)
 
-    expression = cell!.formula!.parsedValue!
+    expression = cell.formula!.parsedValue!
   } else {
     // log(`Calculating ${ref} cell formula...`)
 
@@ -229,7 +231,7 @@ export const evaluateFormula = (sheet: SheetType, value: string, ref?: RefType):
 
     if (isError(expression) || match[1] !== '') throw `Invalid formula '${value}' for cell ${ref}`
 
-    if (cell !== undefined) cell.formula!.parsedValue = expression
+    cell.formula!.parsedValue = expression
   }
 
   return evaluateExpression(sheet, expression)
