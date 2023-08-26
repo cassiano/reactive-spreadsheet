@@ -137,7 +137,7 @@ export const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
   return sheet.cells[ref].signalWrapper()
 }
 
-const AGGREGATION_FUNCTIONS = {
+const FORMULA_FUNCTIONS = {
   sum: function (args: (number | number[][])[]) {
     return args.flat(2).reduce((acc, ref) => acc + ref, 0)
   },
@@ -205,18 +205,18 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
         }
       }
 
-    case 'aggregationFnCall':
+    case 'formulaFnCall':
       const fnName = expr.fnName.toLocaleLowerCase()
 
       const parameters = expr.parameters.map(param =>
         param.type === 'range' ? evaluateRange(sheet, param) : evaluateExpression(sheet, param)
       )
 
-      if (fnName in AGGREGATION_FUNCTIONS) {
+      if (fnName in FORMULA_FUNCTIONS) {
         // TODO: Review code below.
-        return AGGREGATION_FUNCTIONS[fnName as keyof typeof AGGREGATION_FUNCTIONS](parameters)
+        return FORMULA_FUNCTIONS[fnName as keyof typeof FORMULA_FUNCTIONS](parameters)
       } else {
-        throw new Error(`Invalid aggregation function '${fnName}' called.`)
+        throw new Error(`Invalid formula function '${fnName}' called.`)
       }
 
     default: {

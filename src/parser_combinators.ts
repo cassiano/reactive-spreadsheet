@@ -303,8 +303,8 @@ type BinaryOperationType = {
 type NumericType = { type: 'numeric'; value: number }
 type ReferenceType = { type: 'reference'; ref: RefType }
 type ParenthesizedExpressionType = { type: 'parenthesizedExpression'; expr: ExpressionType }
-type AggregationFnCallType = {
-  type: 'aggregationFnCall'
+type FormulaFnCallType = {
+  type: 'formulaFnCall'
   fnName: string
   parameters: (RangeType | ExpressionType)[]
 }
@@ -314,7 +314,7 @@ export type ExpressionType =
   | NumericType
   | ReferenceType
   | ParenthesizedExpressionType
-  | AggregationFnCallType
+  | FormulaFnCallType
 
 // https://stackoverflow.com/questions/2969561/how-to-parse-mathematical-expressions-involving-parentheses
 //
@@ -456,7 +456,7 @@ const range: Parser<RangeType> = map(joinedBy(ref, colon, ref), ([from, to]) => 
 
 const fnParameter = or(range, expression)
 
-const aggregationFnCall = map(
+const formulaFnCall = map(
   and(
     identifier,
     delimitedBy(
@@ -467,12 +467,12 @@ const aggregationFnCall = map(
   ),
   ([fnName, params]) =>
     ({
-      type: 'aggregationFnCall',
+      type: 'formulaFnCall',
       fnName,
       parameters: params === EMPTY_STRING ? [] : params.flat(),
-    } as AggregationFnCallType)
+    } as FormulaFnCallType)
 )
 
-const factor = or3(operand, parenthesizedExpression, aggregationFnCall)
+const factor = or3(operand, parenthesizedExpression, formulaFnCall)
 
 export const formula = precededBy(equals, expression)
