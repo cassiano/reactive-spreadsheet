@@ -153,6 +153,18 @@ const AGGREGATION_FUNCTIONS = {
   min: function (args: (number | number[][])[]) {
     return Math.min(...args.flat(2))
   },
+  rows: function (args: (number | number[][])[]) {
+    if (!(args.length === 1 && Array.isArray(args[0]) && Array.isArray(args[0][0])))
+      throw new Error(`Invalid arguments passed to function 'rows'`)
+
+    return args[0].length
+  },
+  cols: function (args: (number | number[][])[]) {
+    if (!(args.length === 1 && Array.isArray(args[0]) && Array.isArray(args[0][0])))
+      throw new Error(`Invalid arguments passed to function 'cols'`)
+
+    return args[0][0].length
+  },
 }
 
 const evaluateRange = (sheet: SheetType, range: RangeType) =>

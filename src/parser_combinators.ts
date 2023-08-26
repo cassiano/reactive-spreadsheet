@@ -5,7 +5,7 @@ const error = (msg: string) => new Error(msg)
 type ParserResult<T> = [resultOrError: T | Error, rest: string]
 type Parser<T> = (input: string) => ParserResult<T>
 type SingleChar = string
-type EmptyString = ''
+type EmptyString = typeof EMPTY_STRING
 
 export const isError = <T>(result: T | Error): result is Error => result instanceof Error
 
@@ -127,13 +127,16 @@ const many2 = <A>(
   { maxOccurences = Infinity }: ManyOccurencesType = {}
 ): Parser<A[]> => manyN(parser, { minOccurences: 2, maxOccurences })
 
-const empty: Parser<EmptyString> = input => ['', input]
+const EMPTY_STRING = ''
+
+const empty: Parser<EmptyString> = input => [EMPTY_STRING, input]
 
 const optional = <A>(parser: Parser<A>): Parser<A | EmptyString> => or(parser, empty)
 // const optional = <A>(parser: Parser<A>): Parser<A | EmptyString> =>
-//   map(many(parser, { maxOccurences: 1 }), results => (results.length === 0 ? '' : results[0]))
+//   map(many(parser, { maxOccurences: 1 }), results => (results.length === 0 ? EMPTY_STRING : results[0]))
 
-const concat = (parser: Parser<string[]>): Parser<string> => map(parser, chars => chars.join(''))
+const concat = (parser: Parser<string[]>): Parser<string> =>
+  map(parser, chars => chars.join(EMPTY_STRING))
 
 const precededBy = <A>(parserBefore: Parser<unknown>, parser: Parser<A>): Parser<A> =>
   map(and(parserBefore, parser), ([_, result]) => result)
@@ -458,15 +461,15 @@ const aggregationFnCall = map(
     identifier,
     delimitedBy(
       openParens,
-      and(optional(fnParameter), many(precededBy(comma, fnParameter))),
+      optional(and(fnParameter, many(precededBy(comma, fnParameter)))),
       closeParens
     )
   ),
-  ([fnName, [param1, otherParams]]) =>
+  ([fnName, params]) =>
     ({
       type: 'aggregationFnCall',
       fnName,
-      parameters: param1 === '' ? [] : [param1, ...otherParams],
+      parameters: params === EMPTY_STRING ? [] : params.flat(),
     } as AggregationFnCallType)
 )
 
