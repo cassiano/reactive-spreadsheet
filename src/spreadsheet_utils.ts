@@ -1,11 +1,12 @@
 import {
-  ADD,
-  DIVIDE,
-  EXPONENTIATE,
-  EXPONENTIATE_ALT,
+  ADDED_TO,
+  DIVIDED_BY,
+  RAISED_TO,
+  RAISED_TO_ALT,
   ExpressionType,
-  MULTIPLY,
-  SUBTRACT,
+  MULTIPLIED_BY,
+  RangeType,
+  SUBTRACTED_FROM,
   formula,
   isError,
 } from './parser_combinators.ts'
@@ -137,28 +138,27 @@ export const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
 }
 
 const AGGREGATION_FUNCTIONS = {
-  sum: function (refs: number[][]) {
-    return refs.flat(2).reduce((acc, ref) => acc + ref, 0)
+  sum: function (args: (number | number[][])[]) {
+    return args.flat(2).reduce((acc, ref) => acc + ref, 0)
   },
-  count: function (refs: number[][]) {
-    return refs.flat(2).length
+  count: function (args: (number | number[][])[]) {
+    return args.flat(2).length
   },
-  avg: function (refs: number[][]) {
-    return this.sum(refs) / this.count(refs)
+  avg: function (args: (number | number[][])[]) {
+    return this.sum(args) / this.count(args)
   },
-  rows: function (refs: number[][]) {
-    return refs.length
+  max: function (args: (number | number[][])[]) {
+    return Math.max(...args.flat(2))
   },
-  cols: function (refs: number[][]) {
-    return (refs[0] ?? []).length
-  },
-  max: function (refs: number[][]) {
-    return Math.max(...refs.flat(2))
-  },
-  min: function (refs: number[][]) {
-    return Math.min(...refs.flat(2))
+  min: function (args: (number | number[][])[]) {
+    return Math.min(...args.flat(2))
   },
 }
+
+const evaluateRange = (sheet: SheetType, range: RangeType) =>
+  expandRange(range.from, range.to).map(row =>
+    row.map(ref => findOrCreateAndEvaluateCell(sheet, ref.toUpperCase()))
+  )
 
 const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
   switch (expr.type) {
@@ -176,16 +176,16 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
       const right = evaluateExpression(sheet, expr.right)
 
       switch (expr.operator) {
-        case ADD:
+        case ADDED_TO:
           return left + right
-        case SUBTRACT:
+        case SUBTRACTED_FROM:
           return left - right
-        case MULTIPLY:
+        case MULTIPLIED_BY:
           return left * right
-        case DIVIDE:
+        case DIVIDED_BY:
           return left / right
-        case EXPONENTIATE:
-        case EXPONENTIATE_ALT:
+        case RAISED_TO:
+        case RAISED_TO_ALT:
           return left ** right
         default: {
           const _exhaustiveCheck1: never = expr.operator
@@ -196,13 +196,13 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
     case 'aggregationFnCall':
       const fnName = expr.fnName.toLocaleLowerCase()
 
-      const refsValues = expandRange(expr.range.from, expr.range.to).map(row =>
-        row.map(ref => findOrCreateAndEvaluateCell(sheet, ref.toUpperCase()))
+      const parameters = expr.parameters.map(param =>
+        param.type === 'range' ? evaluateRange(sheet, param) : evaluateExpression(sheet, param)
       )
 
       if (fnName in AGGREGATION_FUNCTIONS) {
         // TODO: Review code below.
-        return AGGREGATION_FUNCTIONS[fnName as keyof typeof AGGREGATION_FUNCTIONS](refsValues)
+        return AGGREGATION_FUNCTIONS[fnName as keyof typeof AGGREGATION_FUNCTIONS](parameters)
       } else {
         throw new Error(`Invalid aggregation function '${fnName}' called.`)
       }

@@ -135,21 +135,31 @@ const optional = <A>(parser: Parser<A>): Parser<A | EmptyString> => or(parser, e
 
 const concat = (parser: Parser<string[]>): Parser<string> => map(parser, chars => chars.join(''))
 
-const precededBy = <A, B>(parserBefore: Parser<A>, parser: Parser<B>): Parser<B> =>
+const precededBy = <A>(parserBefore: Parser<unknown>, parser: Parser<A>): Parser<A> =>
   map(and(parserBefore, parser), ([_, result]) => result)
 
-const succeededBy = <A, B>(parser: Parser<A>, parserAfter: Parser<B>): Parser<A> =>
+const succeededBy = <A>(parser: Parser<A>, parserAfter: Parser<unknown>): Parser<A> =>
   map(and(parser, parserAfter), ([result, _]) => result)
 
-const delimitedBy = <A, B, C>(
-  parserBefore: Parser<A>,
-  parser: Parser<B>,
-  parserAfter: Parser<C>
-): Parser<B> => precededBy(parserBefore, succeededBy(parser, parserAfter))
+const delimitedBy = <A>(
+  parserBefore: Parser<unknown>,
+  parser: Parser<A>,
+  parserAfter: Parser<unknown>
+): Parser<A> => precededBy(parserBefore, succeededBy(parser, parserAfter))
 // map(and3(parserBefore, parser, parserAfter), ([_, result, __]) => result)
 
-const surroundedBy = <A, B>(parserBeforeAndAfter: Parser<A>, parser: Parser<B>): Parser<B> =>
+const surroundedBy = <A>(parserBeforeAndAfter: Parser<unknown>, parser: Parser<A>): Parser<A> =>
   delimitedBy(parserBeforeAndAfter, parser, parserBeforeAndAfter)
+
+const splittedBy = <A, B>(
+  parserA: Parser<A>,
+  parserInTheMiddle: Parser<unknown>,
+  parserB: Parser<B>
+): Parser<[A, B]> =>
+  map(and(succeededBy(parserA, parserInTheMiddle), parserB), ([resultA, resultB]) => [
+    resultA,
+    resultB,
+  ])
 
 const char = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c === singleChar)
 const allButChar = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c !== singleChar)
@@ -254,30 +264,32 @@ const float = map(
 
 const numeric = or(float, integer)
 
-export const ADD = '+'
-export const SUBTRACT = '-'
-export const MULTIPLY = '*'
-export const DIVIDE = '/'
-export const EXPONENTIATE = '^'
-export const EXPONENTIATE_ALT = '**'
+export const ADDED_TO = '+'
+export const SUBTRACTED_FROM = '-'
+export const MULTIPLIED_BY = '*'
+export const DIVIDED_BY = '/'
+export const RAISED_TO = '^'
+export const RAISED_TO_ALT = '**'
 export const OPEN_PARENS = '('
 export const CLOSE_PARENS = ')'
 
-const add = char(ADD)
-const subtract = char(SUBTRACT)
-const multiply = char(MULTIPLY)
-const divided = char(DIVIDE)
-const exponentiate = or(char(EXPONENTIATE), charSequence(EXPONENTIATE_ALT))
+const add = char(ADDED_TO)
+const subtract = char(SUBTRACTED_FROM)
+const multiply = char(MULTIPLIED_BY)
+const divided = char(DIVIDED_BY)
+const exponentiate = or(char(RAISED_TO), charSequence(RAISED_TO_ALT))
 const openParens = char(OPEN_PARENS)
 const closeParens = char(CLOSE_PARENS)
 
 export type OperatorType =
-  | typeof ADD
-  | typeof SUBTRACT
-  | typeof MULTIPLY
-  | typeof DIVIDE
-  | typeof EXPONENTIATE
-  | typeof EXPONENTIATE_ALT
+  | typeof ADDED_TO
+  | typeof SUBTRACTED_FROM
+  | typeof MULTIPLIED_BY
+  | typeof DIVIDED_BY
+  | typeof RAISED_TO
+  | typeof RAISED_TO_ALT
+
+export type RangeType = { type: 'range'; from: RefType; to: RefType }
 
 type BinaryOperationType = {
   type: 'binaryOperation'
@@ -291,7 +303,7 @@ type ParenthesizedExpressionType = { type: 'parenthesizedExpression'; expr: Expr
 type AggregationFnCallType = {
   type: 'aggregationFnCall'
   fnName: string
-  range: { from: RefType; to: RefType }
+  parameters: (RangeType | ExpressionType)[]
 }
 
 export type ExpressionType =
@@ -316,8 +328,8 @@ const ref = concat(
   map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()])
 )
 
-const NUMERIC_1: NumericType = { type: 'numeric', value: 1 }
-const NUMERIC_MINUS_1: NumericType = { type: 'numeric', value: -1 }
+const NUMBER_1: NumericType = { type: 'numeric', value: 1 }
+const NUMBER_MINUS_1: NumericType = { type: 'numeric', value: -1 }
 
 const createBinaryOperation = (
   left: ExpressionType,
@@ -354,20 +366,22 @@ const additiveTerm: Parser<ExpressionType> = input => {
   // replace `a - b` by `a + (-b)`.
   if (
     result.type === 'binaryOperation' &&
-    result.operator === SUBTRACT &&
+    result.operator === SUBTRACTED_FROM &&
     (result.right.type === 'binaryOperation' || result.right.type === 'parenthesizedExpression')
   ) {
-    result.operator = ADD
+    result.operator = ADDED_TO
 
     if (result.right.type === 'parenthesizedExpression') {
-      result.right = createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, result.right.expr)
+      result.right = createBinaryOperation(NUMBER_MINUS_1, MULTIPLIED_BY, result.right.expr)
     } else {
-      result.right.left = createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, result.right.left)
+      result.right.left = createBinaryOperation(NUMBER_MINUS_1, MULTIPLIED_BY, result.right.left)
     }
   }
 
   return [result, rest]
 }
+
+const expression = additiveTerm
 
 const multiplicativeTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
@@ -389,15 +403,15 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
   // replace `a / b` by `a * (1 / b)`.
   if (
     result.type === 'binaryOperation' &&
-    result.operator === DIVIDE &&
+    result.operator === DIVIDED_BY &&
     (result.right.type === 'binaryOperation' || result.right.type === 'parenthesizedExpression')
   ) {
-    result.operator = MULTIPLY
+    result.operator = MULTIPLIED_BY
 
     if (result.right.type === 'parenthesizedExpression') {
-      result.right = createBinaryOperation(NUMERIC_1, DIVIDE, result.right.expr)
+      result.right = createBinaryOperation(NUMBER_1, DIVIDED_BY, result.right.expr)
     } else {
-      result.right.left = createBinaryOperation(NUMERIC_1, DIVIDE, result.right.left)
+      result.right.left = createBinaryOperation(NUMBER_1, DIVIDED_BY, result.right.left)
     }
   }
 
@@ -414,7 +428,7 @@ const exponentialTerm: Parser<ExpressionType> = input =>
 
 const optionallySigned = <A extends ExpressionType>(parser: Parser<A>) =>
   map(and(optional(sign), parser), ([signChar, result]) =>
-    signChar === MINUS_SIGN ? createBinaryOperation(NUMERIC_MINUS_1, MULTIPLY, result) : result
+    signChar === MINUS_SIGN ? createBinaryOperation(NUMBER_MINUS_1, MULTIPLIED_BY, result) : result
   )
 
 const operand = or(
@@ -423,27 +437,39 @@ const operand = or(
 )
 
 const parenthesizedExpression = optionallySigned(
-  map(delimitedBy(openParens, additiveTerm, closeParens), expr => ({
+  map(delimitedBy(openParens, expression, closeParens), expr => ({
     type: 'parenthesizedExpression',
     expr,
   }))
 )
 
 const colon = char(':')
-const range = and(succeededBy(ref, colon), ref)
+const comma = char(',')
+const range: Parser<RangeType> = map(splittedBy(ref, colon, ref), ([from, to]) => ({
+  type: 'range',
+  from,
+  to,
+}))
+
+const fnParameter = or(range, expression)
 
 const aggregationFnCall = map(
-  and(identifier, delimitedBy(openParens, range, closeParens)),
-  ([fnName, [from, to]]) =>
+  and(
+    identifier,
+    delimitedBy(
+      openParens,
+      and(optional(fnParameter), many(precededBy(comma, fnParameter))),
+      closeParens
+    )
+  ),
+  ([fnName, [param1, otherParams]]) =>
     ({
       type: 'aggregationFnCall',
       fnName,
-      range: { from, to },
+      parameters: param1 === '' ? [] : [param1, ...otherParams],
     } as AggregationFnCallType)
 )
 
 const factor = or3(operand, parenthesizedExpression, aggregationFnCall)
-
-const expression = additiveTerm
 
 export const formula = precededBy(equals, expression)
