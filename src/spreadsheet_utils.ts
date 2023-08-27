@@ -16,6 +16,7 @@ import {
   computed,
   times,
   signalReplacerFn,
+  debug,
 } from './signals.ts'
 
 const ALPHABET_LENGTH = 'Z'.charCodeAt(0) - 'A'.charCodeAt(0) + 1
@@ -232,11 +233,11 @@ export const evaluateFormula = (sheet: SheetType, value: string, ref: RefType): 
   const useCachedVersion = cell.formula?.parsedValue !== undefined
 
   if (useCachedVersion) {
-    // log(`Using cached formula for ${ref} cell...`)
+    debug(() => `Using cached formula for ${ref} cell...`)
 
     expression = cell.formula!.parsedValue!
   } else {
-    // log(`Calculating ${ref} cell formula...`)
+    debug(() => `Calculating ${ref} cell formula...`)
 
     const match = formula(value.trim())
     expression = match[0]
