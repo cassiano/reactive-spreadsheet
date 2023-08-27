@@ -154,14 +154,10 @@ const delimitedBy = <A>(
 const surroundedBy = <A>(parserBeforeAndAfter: Parser<unknown>, parser: Parser<A>): Parser<A> =>
   delimitedBy(parserBeforeAndAfter, parser, parserBeforeAndAfter)
 
-const joinedBy = <A, B>(
-  parserA: Parser<A>,
-  parserInTheMiddle: Parser<unknown>,
-  parserB: Parser<B>
-): Parser<[A, B]> =>
-  map(and(succeededBy(parserA, parserInTheMiddle), parserB), ([resultA, resultB]) => [
-    resultA,
-    resultB,
+const joinedBy = <A>(parser: Parser<A>, parserInTheMiddle: Parser<unknown>): Parser<[A, A]> =>
+  map(and(succeededBy(parser, parserInTheMiddle), parser), ([result1, result2]) => [
+    result1,
+    result2,
   ])
 
 const char = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c === singleChar)
@@ -443,7 +439,7 @@ const parenthesizedExpression = optionallySigned(
 const colon = spaced(char(':'))
 const comma = spaced(char(','))
 
-const range: Parser<RangeType> = map(joinedBy(ref, colon, ref), ([from, to]) => ({
+const range: Parser<RangeType> = map(joinedBy(ref, colon), ([from, to]) => ({
   type: 'range',
   from,
   to,
