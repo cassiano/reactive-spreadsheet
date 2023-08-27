@@ -207,6 +207,10 @@ const bit = or(zero, one)
 const binaryDigits = many1(bit)
 const binaryNumber = concat(precededBy(charSequence('0b'), binaryDigits))
 
+const SPACE = ' '
+
+const spaced = <A>(parser: Parser<A>): Parser<A> => surroundedBy(many(char(SPACE)), parser)
+
 const DOUBLE_QUOTE = '"'
 const SINGLE_QUOTE = "'"
 const BACK_TICK = '`'
@@ -279,8 +283,8 @@ export const CLOSE_PARENS = ')'
 const add = char(ADDED_TO)
 const subtract = char(SUBTRACTED_FROM)
 const multiply = char(MULTIPLIED_BY)
-const divided = char(DIVIDED_BY)
-const exponentiate = or(char(RAISED_TO), charSequence(RAISED_TO_ALT))
+const divide = char(DIVIDED_BY)
+const raise = or(char(RAISED_TO), charSequence(RAISED_TO_ALT))
 const openParens = char(OPEN_PARENS)
 const closeParens = char(CLOSE_PARENS)
 
@@ -389,7 +393,7 @@ const expression = additiveTerm
 const multiplicativeTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
     mapToBinaryOperation(
-      and3(exponentialTerm, or(multiply, divided) as Parser<OperatorType>, multiplicativeTerm)
+      and3(exponentialTerm, or(multiply, divide) as Parser<OperatorType>, multiplicativeTerm)
     ),
     exponentialTerm
   )(input) as ParserResult<ExpressionType>
@@ -424,7 +428,7 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
 const exponentialTerm: Parser<ExpressionType> = input =>
   or(
     mapToBinaryOperation(
-      and3(factor as Parser<ExpressionType>, exponentiate as Parser<OperatorType>, exponentialTerm)
+      and3(factor as Parser<ExpressionType>, raise as Parser<OperatorType>, exponentialTerm)
     ),
     factor
   )(input) as ParserResult<ExpressionType>
@@ -448,6 +452,7 @@ const parenthesizedExpression = optionallySigned(
 
 const colon = char(':')
 const comma = char(',')
+
 const range: Parser<RangeType> = map(joinedBy(ref, colon, ref), ([from, to]) => ({
   type: 'range',
   from,

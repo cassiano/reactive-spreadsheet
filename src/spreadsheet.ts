@@ -5,9 +5,9 @@ import {
   asRef,
   colAsLabel,
   deleteKeys,
-  generateSpiralSequence,
   loadSheet,
   repeat,
+  sequenceReduce,
 } from './spreadsheet_utils'
 import './style.css'
 import { RefType } from './spreadsheet_utils'
@@ -242,17 +242,17 @@ const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects
 // )
 
 // Spiral sequence.
-const SPIRAL_1ST_SEGMENT_SIZE = 10
-const sheetData: SheetDataType = generateSpiralSequence(
-  SPIRAL_1ST_SEGMENT_SIZE,
-  'south',
-  'left',
-  [{ A1: 0 }],
-  (_i, previousRefs, _nextRef) => `=${previousRefs[previousRefs.length - 1]}+1`
-)
+// const SPIRAL_1ST_SEGMENT_SIZE = 10
+// const sheetData: SheetDataType = generateSpiralSequence(
+//   SPIRAL_1ST_SEGMENT_SIZE,
+//   'south',
+//   'left',
+//   [{ A1: 0 }],
+//   (_i, previousRefs, _nextRef) => `=${previousRefs[previousRefs.length - 1]}+1`
+// )
 
 // Reversed spiral sequence.
-// const REVERSED_SEQUENCE_TERMS = 5
+// const REVERSED_SEQUENCE_TERMS = 30
 // const sheetData: SheetDataType = generateSpiralSequence(
 //   REVERSED_SEQUENCE_TERMS,
 //   'south',
@@ -265,23 +265,23 @@ const sheetData: SheetDataType = generateSpiralSequence(
 // const sheetData: SheetDataType = generateCellSquares(40, 'A1', 1)
 
 // Euler calculation.
-// const EULER_TERMS = 18
-// const sheetData: SheetDataType = sequenceReduce(
-//   EULER_TERMS - 1,
-//   (acc, i) => ({
-//     ...acc,
-//     [`A${i + 2}`]: `=A${i + 1}+1`, // Col A: N
-//     [`B${i + 2}`]: `=B${i + 1}*A${i + 2}`, // Col B: N!
-//     [`C${i + 2}`]: `=1/B${i + 2}`, // Col C: 1 / N!
-//     [`D${i + 2}`]: `=SUM(C1:C${i + 2})`, // Col D: Σ (1 / N!), 0 <= N < ∞
-//   }),
-//   {
-//     A1: 0,
-//     B1: 1,
-//     C1: '=1/B1',
-//     D1: '=SUM(C1:C1)',
-//   }
-// )
+const EULER_TERMS = 18
+const sheetData: SheetDataType = sequenceReduce(
+  EULER_TERMS - 1,
+  (acc, i) => ({
+    ...acc,
+    [`A${i + 2}`]: `=A${i + 1}+1`, // Col A: N
+    [`B${i + 2}`]: `=B${i + 1}*A${i + 2}`, // Col B: N!
+    [`C${i + 2}`]: `=1/B${i + 2}`, // Col C: 1 / N!
+    [`D${i + 2}`]: `=SUM(C1:C${i + 2})`, // Col D: Σ (1 / N!), 0 <= N < ∞
+  }),
+  {
+    A1: 0,
+    B1: 1,
+    C1: '=1/B1',
+    D1: '=SUM(C1:C1)',
+  }
+)
 
 // Reversed Euler calculation.
 // const EULER_TERMS = 18
