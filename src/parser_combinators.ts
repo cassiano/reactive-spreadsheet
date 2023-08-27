@@ -6,7 +6,7 @@ const EMPTY_STRING = ''
 
 type ParserResult<T> = [resultOrError: T | Error, rest: string]
 type Parser<T> = (input: string) => ParserResult<T>
-type SingleChar = string
+export type SingleChar = string
 type EmptyString = typeof EMPTY_STRING
 
 export const isError = <T>(result: T | Error): result is Error => result instanceof Error
@@ -185,23 +185,43 @@ const digit = map(
 )
 const digits = many1(digit)
 
+export type HexDigitType =
+  | '0'
+  | '1'
+  | '2'
+  | '3'
+  | '4'
+  | '5'
+  | '6'
+  | '7'
+  | '8'
+  | '9'
+  | 'A'
+  | 'B'
+  | 'C'
+  | 'D'
+  | 'E'
+  | 'F'
+
 // Hexadecimal.
-const hexDigit: Parser<SingleChar> = satisfy(char => {
+const hexDigit = satisfy(char => {
   const upcasedChar = char.toUpperCase()
 
   return (upcasedChar >= '0' && upcasedChar <= '9') || (upcasedChar >= 'A' && upcasedChar <= 'F')
-})
+}) as Parser<HexDigitType>
 const hexDigits = many1(hexDigit)
-const hexNumber = concat(precededBy(charSequence('0x'), hexDigits))
+const hexNumber = concat(and(charSequence('0x'), concat(hexDigits)))
+
+type BitType = '0' | '1'
 
 // Binary.
 const ZERO = '0'
 const ONE = '1'
 const zero = char(ZERO)
 const one = char(ONE)
-const bit = or(zero, one)
+const bit = or(zero, one) as Parser<BitType>
 const binaryDigits = many1(bit)
-const binaryNumber = concat(precededBy(charSequence('0b'), binaryDigits))
+const binaryNumber = concat(and(charSequence('0b'), concat(binaryDigits)))
 
 const SPACE = ' '
 
@@ -300,7 +320,7 @@ type BinaryOperationType = {
   operator: OperatorType
   right: ExpressionType
 }
-type NumericType = { type: 'numeric'; value: number }
+export type NumericType = { type: 'numeric'; value: number | string }
 type ReferenceType = { type: 'reference'; ref: RefType }
 type ParenthesizedExpressionType = { type: 'parenthesizedExpression'; expr: ExpressionType }
 type FormulaFnCallType = {
@@ -425,7 +445,7 @@ const optionallySigned = <A extends ExpressionType>(parser: Parser<A>) =>
   )
 
 const operand = or(
-  map(numeric, value => ({ type: 'numeric', value })),
+  map(or3(binaryNumber, hexNumber, numeric), value => ({ type: 'numeric', value })),
   optionallySigned(map(ref, ref => ({ type: 'reference', ref })))
 )
 

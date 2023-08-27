@@ -9,6 +9,8 @@ import {
   SUBTRACT,
   formula,
   isError,
+  NumericType,
+  HexDigitType,
 } from './parser_combinators.ts'
 import {
   ComputedSignalKind,
@@ -168,6 +170,38 @@ const FORMULA_FUNCTIONS = {
   },
 }
 
+const BASE_2 = 2
+const BASE_16 = 16
+
+const hexDigitToDecimal = (hexDigit: HexDigitType) => {
+  hexDigit = hexDigit.toUpperCase() as HexDigitType
+
+  return (
+    hexDigit.charCodeAt(0) -
+    (hexDigit >= '0' && hexDigit <= '9' ? '0'.charCodeAt(0) : 'A'.charCodeAt(0) - 10)
+  )
+}
+
+const evaluateNumeric = (value: NumericType['value']) => {
+  if (typeof value === 'number') {
+    return value
+  } else if (value.startsWith('0b')) {
+    return value
+      .slice(2)
+      .split('')
+      .reduce((acc, bit, i) => acc + +bit * BASE_2 ** (value.length - 2 - 1 - i), 0)
+  } else {
+    return value
+      .slice(2)
+      .split('')
+      .reduce(
+        (acc, hexDigit, i) =>
+          acc + hexDigitToDecimal(hexDigit as HexDigitType) * BASE_16 ** (value.length - 2 - 1 - i),
+        0
+      )
+  }
+}
+
 const evaluateRange = (sheet: SheetType, range: RangeType) =>
   expandRange(range.from, range.to).map(row =>
     row.map(ref => findOrCreateAndEvaluateCell(sheet, ref.toUpperCase()))
@@ -176,7 +210,7 @@ const evaluateRange = (sheet: SheetType, range: RangeType) =>
 const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
   switch (expr.type) {
     case 'numeric':
-      return expr.value
+      return evaluateNumeric(expr.value)
 
     case 'reference':
       return findOrCreateAndEvaluateCell(sheet, expr.ref.toUpperCase())
