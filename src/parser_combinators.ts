@@ -378,10 +378,11 @@ const additiveTerm: Parser<ExpressionType> = input => {
   ) {
     result.operator = ADDED_TO
 
-    if (result.right.type === 'parenthesizedExpression') {
-      result.right = createBinaryOperation(NUMBER_MINUS_1, MULTIPLIED_BY, result.right.expr)
-    } else {
+    if (result.right.type === 'binaryOperation') {
       result.right.left = createBinaryOperation(NUMBER_MINUS_1, MULTIPLIED_BY, result.right.left)
+    } else {
+      // result.right.type === 'parenthesizedExpression'
+      result.right = createBinaryOperation(NUMBER_MINUS_1, MULTIPLIED_BY, result.right.expr)
     }
   }
 
@@ -415,10 +416,11 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
   ) {
     result.operator = MULTIPLIED_BY
 
-    if (result.right.type === 'parenthesizedExpression') {
-      result.right = createBinaryOperation(NUMBER_1, DIVIDED_BY, result.right.expr)
-    } else {
+    if (result.right.type === 'binaryOperation') {
       result.right.left = createBinaryOperation(NUMBER_1, DIVIDED_BY, result.right.left)
+    } else {
+      // result.right.type === 'parenthesizedExpression'
+      result.right = createBinaryOperation(NUMBER_1, DIVIDED_BY, result.right.expr)
     }
   }
 
