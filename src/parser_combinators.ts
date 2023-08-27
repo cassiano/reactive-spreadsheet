@@ -218,7 +218,6 @@ const UNDERSCORE = '_'
 const PLUS_SIGN = '+'
 const MINUS_SIGN = '-'
 const PERIOD = '.'
-const EQUALS = '='
 
 const doubleQuote = char(DOUBLE_QUOTE)
 const singleQuote = char(SINGLE_QUOTE)
@@ -227,7 +226,6 @@ const underscore = char(UNDERSCORE)
 const plus = char(PLUS_SIGN)
 const minus = char(MINUS_SIGN)
 const period = char(PERIOD)
-const equals = char(EQUALS)
 
 const string = concat(
   or3(
@@ -279,14 +277,16 @@ export const RAISE = '^'
 export const RAISE_ALT = '**'
 export const OPEN_PARENS = '('
 export const CLOSE_PARENS = ')'
+export const EQUALS = '='
 
-const add = char(ADD)
-const subtract = char(SUBTRACT)
-const multiply = char(MULTIPLY)
-const divide = char(DIVIDE)
-const raise = or(char(RAISE), charSequence(RAISE_ALT))
-const openParens = char(OPEN_PARENS)
-const closeParens = char(CLOSE_PARENS)
+const add = spaced(char(ADD))
+const subtract = spaced(char(SUBTRACT))
+const multiply = spaced(char(MULTIPLY))
+const divide = spaced(char(DIVIDE))
+const raise = spaced(or(char(RAISE), charSequence(RAISE_ALT)))
+const openParens = spaced(char(OPEN_PARENS))
+const closeParens = spaced(char(CLOSE_PARENS))
+const equals = spaced(char(EQUALS))
 
 export type OperatorType =
   | typeof ADD
@@ -440,8 +440,8 @@ const parenthesizedExpression = optionallySigned(
   }))
 )
 
-const colon = char(':')
-const comma = char(',')
+const colon = spaced(char(':'))
+const comma = spaced(char(','))
 
 const range: Parser<RangeType> = map(joinedBy(ref, colon, ref), ([from, to]) => ({
   type: 'range',
