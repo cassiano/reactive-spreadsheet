@@ -210,7 +210,7 @@ const hexDigit = satisfy(char => {
   return (upcasedChar >= '0' && upcasedChar <= '9') || (upcasedChar >= 'A' && upcasedChar <= 'F')
 }) as Parser<HexDigitType>
 const hexDigits = many1(hexDigit)
-const hexNumber = concat(and(charSequence('0x'), concat(hexDigits)))
+const hexNumber = concat(precededBy(charSequence('0x'), hexDigits))
 
 type BitType = '0' | '1'
 
@@ -221,7 +221,7 @@ const zero = char(ZERO)
 const one = char(ONE)
 const bit = or(zero, one) as Parser<BitType>
 const binaryDigits = many1(bit)
-const binaryNumber = concat(and(charSequence('0b'), concat(binaryDigits)))
+const binaryNumber = concat(precededBy(charSequence('0b'), binaryDigits))
 
 const SPACE = ' '
 
@@ -257,7 +257,9 @@ const identifier = word
 
 const sign = or(plus, minus)
 
+const BASE_2 = 2
 const BASE_10 = 10
+const BASE_16 = 16
 
 const natural = map(precededBy(optional(plus), digits), digs =>
   digs.reduce((acc, dig, i) => acc + dig * BASE_10 ** (digs.length - (i + 1)), 0)
@@ -320,7 +322,7 @@ type BinaryOperationType = {
   operator: OperatorType
   right: ExpressionType
 }
-export type NumericType = { type: 'numeric'; value: number | string }
+export type NumericType = { type: 'numeric'; value: number }
 type ReferenceType = { type: 'reference'; ref: RefType }
 type ParenthesizedExpressionType = { type: 'parenthesizedExpression'; expr: ExpressionType }
 type FormulaFnCallType = {
@@ -444,8 +446,34 @@ const optionallySigned = <A extends ExpressionType>(parser: Parser<A>) =>
     signChar === MINUS_SIGN ? createBinaryOperation(NUMBER_MINUS_1, MULTIPLY, result) : result
   )
 
+const hexDigitToDecimal = (hexDigit: HexDigitType) => {
+  hexDigit = hexDigit.toUpperCase() as HexDigitType
+
+  return (
+    hexDigit.charCodeAt(0) -
+    (hexDigit >= '0' && hexDigit <= '9' ? '0'.charCodeAt(0) : 'A'.charCodeAt(0) - 10)
+  )
+}
+
+const binaryToDecimal = (binary: string) =>
+  binary
+    .split('')
+    .reduce((acc, bit, i) => acc + +(bit as BitType) * BASE_2 ** (binary.length - 1 - i), 0)
+
+const hexToDecimal = (hex: string) =>
+  hex
+    .split('')
+    .reduce(
+      (acc, hexDigit, i) =>
+        acc + hexDigitToDecimal(hexDigit as HexDigitType) * BASE_16 ** (hex.length - 1 - i),
+      0
+    )
+
 const operand = or(
-  map(or3(binaryNumber, hexNumber, numeric), value => ({ type: 'numeric', value })),
+  map(or3(map(binaryNumber, binaryToDecimal), map(hexNumber, hexToDecimal), numeric), value => ({
+    type: 'numeric',
+    value,
+  })),
   optionallySigned(map(ref, ref => ({ type: 'reference', ref })))
 )
 
