@@ -1,12 +1,12 @@
 import {
-  ADDED_TO,
-  DIVIDED_BY,
-  RAISED_TO,
-  RAISED_TO_ALT,
+  ADD,
+  DIVIDE,
+  RAISE,
+  RAISE_ALT,
   ExpressionType,
-  MULTIPLIED_BY,
+  MULTIPLY,
   RangeType,
-  SUBTRACTED_FROM,
+  SUBTRACT,
   formula,
   isError,
 } from './parser_combinators.ts'
@@ -189,16 +189,16 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
       const right = evaluateExpression(sheet, expr.right)
 
       switch (expr.operator) {
-        case ADDED_TO:
+        case ADD:
           return left + right
-        case SUBTRACTED_FROM:
+        case SUBTRACT:
           return left - right
-        case MULTIPLIED_BY:
+        case MULTIPLY:
           return left * right
-        case DIVIDED_BY:
+        case DIVIDE:
           return left / right
-        case RAISED_TO:
-        case RAISED_TO_ALT:
+        case RAISE:
+        case RAISE_ALT:
           return left ** right
         default: {
           const _exhaustiveCheck1: never = expr.operator

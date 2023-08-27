@@ -271,30 +271,30 @@ const float = map(
 
 const numeric = or(float, integer)
 
-export const ADDED_TO = '+'
-export const SUBTRACTED_FROM = '-'
-export const MULTIPLIED_BY = '*'
-export const DIVIDED_BY = '/'
-export const RAISED_TO = '^'
-export const RAISED_TO_ALT = '**'
+export const ADD = '+'
+export const SUBTRACT = '-'
+export const MULTIPLY = '*'
+export const DIVIDE = '/'
+export const RAISE = '^'
+export const RAISE_ALT = '**'
 export const OPEN_PARENS = '('
 export const CLOSE_PARENS = ')'
 
-const add = char(ADDED_TO)
-const subtract = char(SUBTRACTED_FROM)
-const multiply = char(MULTIPLIED_BY)
-const divide = char(DIVIDED_BY)
-const raise = or(char(RAISED_TO), charSequence(RAISED_TO_ALT))
+const add = char(ADD)
+const subtract = char(SUBTRACT)
+const multiply = char(MULTIPLY)
+const divide = char(DIVIDE)
+const raise = or(char(RAISE), charSequence(RAISE_ALT))
 const openParens = char(OPEN_PARENS)
 const closeParens = char(CLOSE_PARENS)
 
 export type OperatorType =
-  | typeof ADDED_TO
-  | typeof SUBTRACTED_FROM
-  | typeof MULTIPLIED_BY
-  | typeof DIVIDED_BY
-  | typeof RAISED_TO
-  | typeof RAISED_TO_ALT
+  | typeof ADD
+  | typeof SUBTRACT
+  | typeof MULTIPLY
+  | typeof DIVIDE
+  | typeof RAISE
+  | typeof RAISE_ALT
 
 export type RangeType = { type: 'range'; from: RefType; to: RefType }
 
@@ -373,16 +373,16 @@ const additiveTerm: Parser<ExpressionType> = input => {
   // replace `a - b` by `a + (-b)`.
   if (
     result.type === 'binaryOperation' &&
-    result.operator === SUBTRACTED_FROM &&
+    result.operator === SUBTRACT &&
     (result.right.type === 'binaryOperation' || result.right.type === 'parenthesizedExpression')
   ) {
-    result.operator = ADDED_TO
+    result.operator = ADD
 
     if (result.right.type === 'binaryOperation') {
-      result.right.left = createBinaryOperation(NUMBER_MINUS_1, MULTIPLIED_BY, result.right.left)
+      result.right.left = createBinaryOperation(NUMBER_MINUS_1, MULTIPLY, result.right.left)
     } else {
       // result.right.type === 'parenthesizedExpression'
-      result.right = createBinaryOperation(NUMBER_MINUS_1, MULTIPLIED_BY, result.right.expr)
+      result.right = createBinaryOperation(NUMBER_MINUS_1, MULTIPLY, result.right.expr)
     }
   }
 
@@ -411,16 +411,16 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
   // replace `a / b` by `a * (1 / b)`.
   if (
     result.type === 'binaryOperation' &&
-    result.operator === DIVIDED_BY &&
+    result.operator === DIVIDE &&
     (result.right.type === 'binaryOperation' || result.right.type === 'parenthesizedExpression')
   ) {
-    result.operator = MULTIPLIED_BY
+    result.operator = MULTIPLY
 
     if (result.right.type === 'binaryOperation') {
-      result.right.left = createBinaryOperation(NUMBER_1, DIVIDED_BY, result.right.left)
+      result.right.left = createBinaryOperation(NUMBER_1, DIVIDE, result.right.left)
     } else {
       // result.right.type === 'parenthesizedExpression'
-      result.right = createBinaryOperation(NUMBER_1, DIVIDED_BY, result.right.expr)
+      result.right = createBinaryOperation(NUMBER_1, DIVIDE, result.right.expr)
     }
   }
 
@@ -437,7 +437,7 @@ const exponentialTerm: Parser<ExpressionType> = input =>
 
 const optionallySigned = <A extends ExpressionType>(parser: Parser<A>) =>
   map(and(optional(sign), parser), ([signChar, result]) =>
-    signChar === MINUS_SIGN ? createBinaryOperation(NUMBER_MINUS_1, MULTIPLIED_BY, result) : result
+    signChar === MINUS_SIGN ? createBinaryOperation(NUMBER_MINUS_1, MULTIPLY, result) : result
   )
 
 const operand = or(
