@@ -2,6 +2,8 @@ import { RefType } from './spreadsheet_utils.ts'
 
 const error = (msg: string) => new Error(msg)
 
+const EMPTY_STRING = ''
+
 type ParserResult<T> = [resultOrError: T | Error, rest: string]
 type Parser<T> = (input: string) => ParserResult<T>
 type SingleChar = string
@@ -126,8 +128,6 @@ const many2 = <A>(
   parser: Parser<A>,
   { maxOccurences = Infinity }: ManyOccurencesType = {}
 ): Parser<A[]> => manyN(parser, { minOccurences: 2, maxOccurences })
-
-const EMPTY_STRING = ''
 
 const empty: Parser<EmptyString> = input => [EMPTY_STRING, input]
 
