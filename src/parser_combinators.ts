@@ -202,6 +202,12 @@ export type HexDigitType =
   | 'D'
   | 'E'
   | 'F'
+  | 'a'
+  | 'b'
+  | 'c'
+  | 'd'
+  | 'e'
+  | 'f'
 
 // Hexadecimal.
 const hexDigit = satisfy(char => {
