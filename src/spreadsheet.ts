@@ -335,6 +335,14 @@ export const refreshSheet = () => {
 
 refreshSheet()
 
+// declare global {
+//   interface Window {
+//     sheetAsJson: typeof sheetAsJson
+//     sheetAsTable: typeof sheetAsTable
+//     sheet: typeof sheet
+//   }
+// }
+
 // window.sheetAsJson = sheetAsJson
 // window.sheetAsTable = sheetAsTable
 // window.sheet = sheet
