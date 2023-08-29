@@ -138,6 +138,7 @@ export const findOrCreateAndEvaluateCell = (sheet: SheetType, ref: RefType) => {
   return sheet.cells[ref].signalWrapper()
 }
 
+// Always use single, lowercased method names.
 const FORMULA_FUNCTIONS = {
   sum: function (args: (number | number[][])[]) {
     return args.flat(2).reduce((acc, ref) => acc + ref, 0)
@@ -173,7 +174,9 @@ const evaluateRange = (sheet: SheetType, range: RangeType) =>
     row.map(ref => findOrCreateAndEvaluateCell(sheet, ref.toUpperCase()))
   )
 
-const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
+type EvaluateExpressionType = (sheet: SheetType, expr: ExpressionType) => number
+
+const evaluateExpression: EvaluateExpressionType = (sheet, expr) => {
   switch (expr.type) {
     case 'numeric':
       return expr.value
@@ -201,7 +204,7 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
         case RAISE_ALT:
           return left ** right
         default: {
-          const _exhaustiveCheck1: never = expr.operator
+          const _exhaustiveCheck: never = expr.operator
           throw new Error(`Invalid operator ${expr.operator}`)
         }
       }
@@ -221,7 +224,7 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
       }
 
     default: {
-      const _exhaustiveCheck2: never = expr
+      const _exhaustiveCheck: never = expr
       throw new Error('Invalid expression type')
     }
   }

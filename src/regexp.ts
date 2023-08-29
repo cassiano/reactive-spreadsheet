@@ -22,13 +22,11 @@ import {
   and3,
   ParserResult,
   andN,
-  allButChar,
-  allButCharRange,
   charRange,
-  all,
   orN,
   manyN,
   concat,
+  none,
 } from './parser_combinators.ts'
 
 type CharacterClassRangeType = { from: SingleChar; to: SingleChar }
@@ -44,7 +42,7 @@ type CharacterClassType = {
 }
 type ParenthesizedRegExpType = {
   type: 'parenthesizedRegExp'
-  expr: RegExpType
+  expr: RegExpType[]
 }
 type AlternationType = {
   type: 'alternation'
@@ -133,11 +131,13 @@ const repetition = map(
     char('*'),
     char('+'),
     char('?'),
-    delimitedBy(char('{'), joinedBy(optional(natural), comma), char('}'))
+    delimitedBy(char('{'), or(joinedBy(optional(natural), comma), natural), char('}'))
   ),
   result =>
     typeof result === 'string'
       ? REPETITION_LIMITS[result as keyof typeof REPETITION_LIMITS]
+      : typeof result === 'number'
+      ? { min: result, max: result }
       : { min: result[0] === '' ? 0 : result[0], max: result[1] === '' ? Infinity : result[1] }
 )
 
@@ -159,16 +159,21 @@ const evaluateRegExpPart = (part: RegExpType) => {
       return char(part.character)
 
     case 'parenthesizedRegExp':
-      return evaluateRegExpPart(part.expr[0])
+      return concat(andN(...part.expr.map(part => evaluateRegExpPart(part))))
 
     case 'characterClass':
       return part.negated
-        ? all(
+        ? none({ charsToConsume: 1 })(
             ...part.options.map((c: SingleChar | CharacterClassRangeType) =>
-              typeof c === 'string' ? allButChar(c) : allButCharRange(c.from, c.to)
+              typeof c === 'string' ? char(c) : charRange(c.from, c.to)
             )
           )
-        : orN(
+        : // ? all(
+          //     ...part.options.map((c: SingleChar | CharacterClassRangeType) =>
+          //       typeof c === 'string' ? allButChar(c) : allButCharRange(c.from, c.to)
+          //     )
+          //   )
+          orN(
             ...part.options.map((c: SingleChar | CharacterClassRangeType) =>
               typeof c === 'string' ? char(c) : charRange(c.from, c.to)
             )
@@ -192,8 +197,29 @@ const evaluateRegExpPart = (part: RegExpType) => {
   }
 }
 
+const CHARACTER_CLASS_ABBREVIATIONS = {
+  [String.raw`\d`]: '[0-9]',
+  [String.raw`\D`]: '[^0-9]',
+  [String.raw`\h`]: '[0-9a-fA-F]',
+  [String.raw`\H`]: '[^0-9a-fA-F]',
+  [String.raw`\w`]: '[0-9a-zA-Z_]',
+  [String.raw`\W`]: '[^0-9a-zA-Z_]',
+  [String.raw`\s`]: '[ \t\r\n\f]',
+  [String.raw`\S`]: '[^ \t\r\n\f]',
+  [String.raw`\r`]: '[\r\n]',
+  [String.raw`\R`]: '[^\r\n]',
+}
+
+const replaceCharacterClassAbbreviations = (re: string) => {
+  Object.entries(CHARACTER_CLASS_ABBREVIATIONS).forEach(([k, v]) => {
+    re = re.replaceAll(k, v)
+  })
+
+  return re
+}
+
 const regExpMatcher = (re: string): Parser<string[]> => {
-  const [result, rest] = regExp(re)
+  const [result, rest] = regExp(replaceCharacterClassAbbreviations(re))
 
   if (isError(result) || rest !== '') throw new Error('Invalid regular expression')
 

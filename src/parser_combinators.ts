@@ -154,10 +154,13 @@ export const all =
 
 // Might be used as both negative look-behind and negative look-ahead.
 export const none =
-  <T>(...parsers: Parser<T>[]): Parser<EmptyString> =>
+  ({ charsToConsume = 0 } = {}) =>
+  <T>(...parsers: Parser<T>[]): Parser<string> =>
   input => {
     let rest = input
     let result: T | Error
+
+    if (input.length === 0) return [error(`(none) Empty input`), input]
 
     for (const parser of parsers) {
       ;[result, rest] = parser(input)
@@ -166,7 +169,7 @@ export const none =
         return [error(`(none) One of the ${parsers.length} parsers satisfied`), input]
     }
 
-    return [EMPTY_STRING, input]
+    return [input.slice(0, charsToConsume), input.slice(charsToConsume)]
   }
 
 export type ManyOccurencesType = { minOccurences?: number; maxOccurences?: number }
@@ -384,15 +387,6 @@ export const integer = map(
   and(optional(sign), natural),
   ([signChar, nat]) => (signChar === MINUS_SIGN ? -1 : 1) * nat
 )
-
-// export const naturalGreaterThanZero: Parser<number> = input => {
-//   const [result, rest] = natural(input)
-
-//   if (isError(result)) return [result, input]
-//   if (!(result > 0)) return [error(`Number must be > 0, but was ${result}`), input]
-
-//   return [result, rest]
-// }
 
 export const naturalGreaterThanZero = numberRange({ from: 1 })
 
