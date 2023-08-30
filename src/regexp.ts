@@ -34,6 +34,11 @@ import {
 
 type CharacterClassRangeType = { from: SingleChar; to: SingleChar }
 
+type RepetitionLimitsType = {
+  min: number
+  max: number
+}
+
 type RegExpSingleCharType = {
   type: 'regExpSingleChar'
   character: SingleChar
@@ -55,8 +60,7 @@ type AlternationType = {
 type RepetitionType = {
   type: 'repetition'
   expr: RegExpTypePart
-  min: number
-  max: number
+  limits: RepetitionLimitsType
 }
 
 type RegExpTypePart =
@@ -134,7 +138,7 @@ const parenthesizedRegExp: Parser<ParenthesizedRegExpType> = map(
   })
 )
 
-const repetition: Parser<Pick<RepetitionType, 'min' | 'max'>> = map(
+const repetition: Parser<RepetitionLimitsType> = map(
   or4(
     char('*'),
     char('+'),
@@ -160,7 +164,7 @@ const regExpfactor: Parser<RegExpTypePart> = map(
       : ({
           type: 'repetition',
           expr,
-          ...limits,
+          limits,
         } as RepetitionType)
 )
 
@@ -189,12 +193,7 @@ const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
     }
 
     case 'repetition':
-      return concat(
-        manyN(evaluateRegExpPart(part.expr), {
-          minOccurences: part.min,
-          maxOccurences: part.max,
-        })
-      )
+      return concat(manyN(evaluateRegExpPart(part.expr), part.limits))
 
     case 'alternation':
       return concat(

@@ -169,24 +169,21 @@ export const none =
     return [input.slice(0, charsToConsume), input.slice(charsToConsume)]
   }
 
-export type ManyOccurencesType = { minOccurences?: number; maxOccurences?: number }
+export type ManyNLimitsType = { min?: number; max?: number }
 
 export const manyN =
-  <A>(
-    parser: Parser<A>,
-    { minOccurences = 0, maxOccurences = Infinity }: ManyOccurencesType = {}
-  ): Parser<A[]> =>
+  <A>(parser: Parser<A>, { min = 0, max = Infinity }: ManyNLimitsType = {}): Parser<A[]> =>
   input => {
-    if (maxOccurences === 0) return [[], input]
+    if (max === 0) return [[], input]
 
     const [result, rest] = parser(input)
 
-    if (isError(result)) return minOccurences > 0 ? [result, input] : [[], input]
+    if (isError(result)) return min > 0 ? [result, input] : [[], input]
 
-    return map(
-      manyN(parser, { minOccurences: minOccurences - 1, maxOccurences: maxOccurences - 1 }),
-      otherResults => [result, ...otherResults]
-    )(rest)
+    return map(manyN(parser, { min: min - 1, max: max - 1 }), otherResults => [
+      result,
+      ...otherResults,
+    ])(rest)
   }
 
 export const many = manyN
@@ -194,13 +191,13 @@ export const many0 = many
 
 export const many1 = <A>(
   parser: Parser<A>,
-  { maxOccurences = Infinity }: ManyOccurencesType = {}
-): Parser<A[]> => manyN(parser, { minOccurences: 1, maxOccurences })
+  { max = Infinity }: ManyNLimitsType = {}
+): Parser<A[]> => manyN(parser, { min: 1, max })
 
 export const many2 = <A>(
   parser: Parser<A>,
-  { maxOccurences = Infinity }: ManyOccurencesType = {}
-): Parser<A[]> => manyN(parser, { minOccurences: 2, maxOccurences })
+  { max = Infinity }: ManyNLimitsType = {}
+): Parser<A[]> => manyN(parser, { min: 2, max })
 
 export const empty: Parser<EmptyString> = input => [EMPTY_STRING, input]
 
