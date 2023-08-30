@@ -30,6 +30,7 @@ import {
   EMPTY_STRING,
   SingleChar,
   none,
+  allButChar,
 } from './parser_combinators.ts'
 
 type CharacterClassRangeType = { from: SingleChar; to: SingleChar }
@@ -102,11 +103,11 @@ const alternativeTerm: Parser<RegExpTypePart> = input => {
 const regExp: Parser<RegExpType> = many1(alternativeTerm)
 
 const regExpSingleChar = map(
-  satisfy(c => !'*+?|{}[]()'.includes(c)),
+  satisfy(c => !'*+?|{}[]()$^'.includes(c)),
   character => ({ type: 'singleChar', character } as SingleCharType)
 )
 
-const characterClassChar = satisfy(c => c !== ']')
+const characterClassChar = allButChar(']')
 
 const characterClassOption = or(
   map(
