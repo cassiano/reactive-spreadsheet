@@ -170,7 +170,7 @@ const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
       return part.character === PERIOD ? anyChar() : char(part.character)
 
     case 'parenthesizedRegExp':
-      return concat(andN(...part.expr.map(part => evaluateRegExpPart(part))))
+      return concat(andN(...part.expr.map(evaluateRegExpPart)))
 
     case 'characterClass':
       return part.negated
@@ -199,7 +199,9 @@ const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
       )
 
     case 'alternation':
-      return or(evaluateRegExpPart(part.left[0]), evaluateRegExpPart(part.right[0]))
+      return concat(
+        or(andN(...part.left.map(evaluateRegExpPart)), andN(...part.right.map(evaluateRegExpPart)))
+      )
 
     default: {
       const _exhaustiveCheck: never = part
