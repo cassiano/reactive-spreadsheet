@@ -25,11 +25,11 @@ import {
   orN,
   manyN,
   concat,
-  none,
   anyChar,
   PERIOD,
   EMPTY_STRING,
   SingleChar,
+  none,
 } from './parser_combinators.ts'
 
 type CharacterClassRangeType = { from: SingleChar; to: SingleChar }
@@ -170,22 +170,22 @@ const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
       return part.character === PERIOD ? anyChar() : char(part.character)
 
     case 'parenthesizedRegExp':
-      return concat(andN(...part.expr.map(evaluateRegExpPart)))
+      return concat(andN(part.expr.map(evaluateRegExpPart)))
 
     case 'characterClass':
       return part.negated
         ? none({ charsToConsume: 1 })(
-            ...part.options.map((c: SingleChar | CharacterClassRangeType) =>
+            part.options.map((c: SingleChar | CharacterClassRangeType) =>
               typeof c === 'string' ? char(c) : charRange(c.from, c.to)
             )
           )
         : // ? all(
-          //     ...part.options.map((c: SingleChar | CharacterClassRangeType) =>
+          //     part.options.map((c: SingleChar | CharacterClassRangeType) =>
           //       typeof c === 'string' ? allButChar(c) : allButCharRange(c.from, c.to)
           //     )
           //   )
           orN(
-            ...part.options.map((c: SingleChar | CharacterClassRangeType) =>
+            part.options.map((c: SingleChar | CharacterClassRangeType) =>
               typeof c === 'string' ? char(c) : charRange(c.from, c.to)
             )
           )
@@ -200,7 +200,7 @@ const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
 
     case 'alternation':
       return concat(
-        or(andN(...part.left.map(evaluateRegExpPart)), andN(...part.right.map(evaluateRegExpPart)))
+        or(andN(part.left.map(evaluateRegExpPart)), andN(part.right.map(evaluateRegExpPart)))
       )
 
     default: {
@@ -243,7 +243,7 @@ const buildRegExp = (regExpAsString: string): RegExpType => {
 const regExpParser = (regExpAsString: string): Parser<string> => {
   const re = buildRegExp(regExpAsString)
 
-  return concat(andN(...re.map(part => evaluateRegExpPart(part))))
+  return concat(andN(re.map(evaluateRegExpPart)))
 }
 
 const match = (parser: Parser<string>, input: string): ParserResult<string> => {

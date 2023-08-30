@@ -71,7 +71,7 @@ export const or5 = <A, B, C, D, E>(
 ): Parser<A | B | C | D | E> => or(parserA, or4(parserB, parserC, parserD, parserE))
 
 export const orN =
-  <T>(...parsers: Parser<T>[]): Parser<T> =>
+  <T>(parsers: Parser<T>[]): Parser<T> =>
   input => {
     for (const parser of parsers) {
       const [result, rest] = parser(input)
@@ -117,7 +117,7 @@ export const and5 = <A, B, C, D, E>(
   ])
 
 export const andN =
-  <T>(...parsers: Parser<T>[]): Parser<T[]> =>
+  <T>(parsers: Parser<T>[]): Parser<T[]> =>
   input => {
     let rest = input
     let result: T[] = []
@@ -135,7 +135,7 @@ export const andN =
   }
 
 export const all =
-  <T>(...parsers: Parser<T>[]): Parser<T> =>
+  <T>(parsers: Parser<T>[]): Parser<T> =>
   input => {
     let rest = input
     let result!: T | Error
@@ -155,7 +155,7 @@ export const all =
 // Might be used as both negative look-behind and negative look-ahead.
 export const none =
   ({ charsToConsume = 0 } = {}) =>
-  <T>(...parsers: Parser<T>[]): Parser<string> =>
+  <T>(parsers: Parser<T>[]): Parser<string> =>
   input => {
     let rest = input
     let result: T | Error
