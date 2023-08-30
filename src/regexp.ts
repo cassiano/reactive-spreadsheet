@@ -177,8 +177,8 @@ const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
       return concat(andN(part.expr.map(evaluateRegExpPart)))
 
     case 'characterClass': {
-      const optionsParser = part.options.map((c: SingleChar | CharacterClassRangeType) =>
-        typeof c === 'string' ? char(c) : charRange(c.from, c.to)
+      const optionsParser = part.options.map(option =>
+        typeof option === 'string' ? char(option) : charRange(option.from, option.to)
       )
 
       // Negated alternative:
