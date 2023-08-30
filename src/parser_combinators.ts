@@ -157,13 +157,10 @@ export const none =
   ({ charsToConsume = 0 } = {}) =>
   <T>(parsers: Parser<T>[]): Parser<string> =>
   input => {
-    let rest = input
-    let result: T | Error
-
     if (input.length === 0) return [error(`(none) Empty input`), input]
 
     for (const parser of parsers) {
-      ;[result, rest] = parser(input)
+      const [result, _] = parser(input)
 
       if (!isError(result))
         return [error(`(none) One of the ${parsers.length} parsers satisfied`), input]
