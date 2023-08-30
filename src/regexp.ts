@@ -219,14 +219,14 @@ const CHARACTER_CLASS_ABBREVIATIONS: { [index: SingleChar]: string } = {
 }
 
 const replaceCharacterClassAbbreviations = (re: string) => {
-  Object.entries(CHARACTER_CLASS_ABBREVIATIONS).forEach(([k, v]) => {
+  Object.entries(CHARACTER_CLASS_ABBREVIATIONS).forEach(([abbrev, characterClass]) => {
     // Create regular abbreviations (\d, \h, \w etc, as well as /d, /h, /w etc).
-    re = re.replaceAll(`\\${k}`, v).replaceAll(`/${k}`, v)
+    re = re.replaceAll(`\\${abbrev}`, characterClass).replaceAll(`/${abbrev}`, characterClass)
 
     // Create "negated" upper-cased abbreviations (\D, \H, \W etc, as well as /D, /H, /W etc).
-    k = k.toUpperCase()
-    v = v.slice(0, 1) + '^' + v.slice(1)
-    re = re.replaceAll(`\\${k}`, v).replaceAll(`/${k}`, v)
+    abbrev = abbrev.toUpperCase()
+    characterClass = characterClass.slice(0, 1) + '^' + characterClass.slice(1)
+    re = re.replaceAll(`\\${abbrev}`, characterClass).replaceAll(`/${abbrev}`, characterClass)
   })
 
   return re
