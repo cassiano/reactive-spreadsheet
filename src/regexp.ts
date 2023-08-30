@@ -172,23 +172,21 @@ const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
     case 'parenthesizedRegExp':
       return concat(andN(part.expr.map(evaluateRegExpPart)))
 
-    case 'characterClass':
-      return part.negated
-        ? none({ charsToConsume: 1 })(
-            part.options.map((c: SingleChar | CharacterClassRangeType) =>
-              typeof c === 'string' ? char(c) : charRange(c.from, c.to)
-            )
-          )
-        : // ? all(
-          //     part.options.map((c: SingleChar | CharacterClassRangeType) =>
-          //       typeof c === 'string' ? allButChar(c) : allButCharRange(c.from, c.to)
-          //     )
-          //   )
-          orN(
-            part.options.map((c: SingleChar | CharacterClassRangeType) =>
-              typeof c === 'string' ? char(c) : charRange(c.from, c.to)
-            )
-          )
+    case 'characterClass': {
+      const optionsParser = part.options.map((c: SingleChar | CharacterClassRangeType) =>
+        typeof c === 'string' ? char(c) : charRange(c.from, c.to)
+      )
+
+      // Negated alternative:
+      //
+      // all(
+      //   part.options.map((c: SingleChar | CharacterClassRangeType) =>
+      //     typeof c === 'string' ? allButChar(c) : allButCharRange(c.from, c.to)
+      //   )
+      // )
+
+      return !part.negated ? orN(optionsParser) : none({ charsToConsume: 1 })(optionsParser)
+    }
 
     case 'repetition':
       return concat(
