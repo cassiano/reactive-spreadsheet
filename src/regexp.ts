@@ -1,6 +1,5 @@
 import {
   Parser,
-  SingleChar,
   and,
   char,
   closeParens,
@@ -27,6 +26,10 @@ import {
   manyN,
   concat,
   none,
+  anyChar,
+  PERIOD,
+  EMPTY_STRING,
+  SingleChar,
 } from './parser_combinators.ts'
 
 type CharacterClassRangeType = { from: SingleChar; to: SingleChar }
@@ -42,26 +45,28 @@ type CharacterClassType = {
 }
 type ParenthesizedRegExpType = {
   type: 'parenthesizedRegExp'
-  expr: RegExpType[]
+  expr: RegExpType
 }
 type AlternationType = {
   type: 'alternation'
-  left: RegExpType[]
-  right: RegExpType[]
+  left: RegExpType
+  right: RegExpType
 }
 type RepetitionType = {
   type: 'repetition'
-  expr: RegExpType
+  expr: RegExpTypePart
   min: number
   max: number
 }
 
-type RegExpType =
+type RegExpTypePart =
   | RegExpSingleCharType
   | CharacterClassType
   | ParenthesizedRegExpType
   | AlternationType
   | RepetitionType
+
+type RegExpType = RegExpTypePart[]
 
 const REPETITION_LIMITS = {
   '*': { min: 0, max: Infinity },
@@ -71,10 +76,10 @@ const REPETITION_LIMITS = {
 
 const alternate = char('|')
 
-const alternativeTerm: Parser<RegExpType[]> = input => {
+const alternativeTerm: Parser<RegExpTypePart> = input => {
   const [result, rest] = or(
     map(
-      and3(many1(regExpfactor), alternate, alternativeTerm),
+      and3(many1(regExpfactor), alternate, many1(alternativeTerm)),
       ([left, _, right]) =>
         ({
           type: 'alternation',
@@ -83,14 +88,14 @@ const alternativeTerm: Parser<RegExpType[]> = input => {
         } as AlternationType)
     ),
     regExpfactor
-  )(input) as ParserResult<RegExpType[]>
+  )(input) as ParserResult<RegExpTypePart>
 
   if (isError(result)) return [result, input]
 
   return [result, rest]
 }
 
-const regExp = many1(alternativeTerm)
+const regExp: Parser<RegExpType> = many1(alternativeTerm)
 
 const regExpSingleChar = map(
   satisfy(c => !'*+?|{}[]()'.includes(c)),
@@ -111,7 +116,7 @@ const characterClassOption = or(
   characterClassChar
 )
 
-const characterClass = map(
+const characterClass: Parser<CharacterClassType> = map(
   delimitedBy(char('['), and(optional(char('^')), many1(characterClassOption)), char(']')),
   ([caret, options]) =>
     ({
@@ -121,12 +126,15 @@ const characterClass = map(
     } as CharacterClassType)
 )
 
-const parenthesizedRegExp = map(delimitedBy(openParens, regExp, closeParens), expr => ({
-  type: 'parenthesizedRegExp',
-  expr,
-}))
+const parenthesizedRegExp: Parser<ParenthesizedRegExpType> = map(
+  delimitedBy(openParens, regExp, closeParens),
+  expr => ({
+    type: 'parenthesizedRegExp',
+    expr,
+  })
+)
 
-const repetition = map(
+const repetition: Parser<Pick<RepetitionType, 'min' | 'max'>> = map(
   or4(
     char('*'),
     char('+'),
@@ -138,13 +146,16 @@ const repetition = map(
       ? REPETITION_LIMITS[result as keyof typeof REPETITION_LIMITS]
       : typeof result === 'number'
       ? { min: result, max: result }
-      : { min: result[0] === '' ? 0 : result[0], max: result[1] === '' ? Infinity : result[1] }
+      : {
+          min: result[0] === EMPTY_STRING ? 0 : result[0],
+          max: result[1] === EMPTY_STRING ? Infinity : result[1],
+        }
 )
 
-const regExpfactor = map(
+const regExpfactor: Parser<RegExpTypePart> = map(
   and(or3(regExpSingleChar, characterClass, parenthesizedRegExp), optional(repetition)),
   ([expr, limits]) =>
-    limits === ''
+    limits === EMPTY_STRING
       ? expr
       : ({
           type: 'repetition',
@@ -153,10 +164,10 @@ const regExpfactor = map(
         } as RepetitionType)
 )
 
-const evaluateRegExpPart = (part: RegExpType) => {
+const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
   switch (part.type) {
     case 'regExpSingleChar':
-      return char(part.character)
+      return part.character === PERIOD ? anyChar() : char(part.character)
 
     case 'parenthesizedRegExp':
       return concat(andN(...part.expr.map(part => evaluateRegExpPart(part))))
@@ -188,7 +199,7 @@ const evaluateRegExpPart = (part: RegExpType) => {
       )
 
     case 'alternation':
-      return or(evaluateRegExpPart(part.left[0]), evaluateRegExpPart(part.right))
+      return or(evaluateRegExpPart(part.left[0]), evaluateRegExpPart(part.right[0]))
 
     default: {
       const _exhaustiveCheck: never = part
@@ -197,31 +208,90 @@ const evaluateRegExpPart = (part: RegExpType) => {
   }
 }
 
-const CHARACTER_CLASS_ABBREVIATIONS = {
-  [String.raw`\d`]: '[0-9]',
-  [String.raw`\D`]: '[^0-9]',
-  [String.raw`\h`]: '[0-9a-fA-F]',
-  [String.raw`\H`]: '[^0-9a-fA-F]',
-  [String.raw`\w`]: '[0-9a-zA-Z_]',
-  [String.raw`\W`]: '[^0-9a-zA-Z_]',
-  [String.raw`\s`]: '[ \t\r\n\f]',
-  [String.raw`\S`]: '[^ \t\r\n\f]',
-  [String.raw`\r`]: '[\r\n]',
-  [String.raw`\R`]: '[^\r\n]',
+const CHARACTER_CLASS_ABBREVIATIONS: { [index: SingleChar]: string } = {
+  d: '[0-9]',
+  h: '[0-9a-fA-F]',
+  w: '[0-9a-zA-Z_]',
+  s: '[ \t\r\n\f]',
+  r: '[\r\n]',
 }
 
 const replaceCharacterClassAbbreviations = (re: string) => {
   Object.entries(CHARACTER_CLASS_ABBREVIATIONS).forEach(([k, v]) => {
-    re = re.replaceAll(k, v)
+    // Create regular abbreviations (\d, \h, \w etc, as well as /d, /h, /w etc).
+    re = re.replaceAll(`\\${k}`, v).replaceAll(`/${k}`, v)
+
+    // Create "negated" upper-cased abbreviations (\D, \H, \W etc, as well as /D, /H, /W etc).
+    k = k.toUpperCase()
+    v = v.slice(0, 1) + '^' + v.slice(1)
+    re = re.replaceAll(`\\${k}`, v).replaceAll(`/${k}`, v)
   })
 
   return re
 }
 
-const regExpMatcher = (re: string): Parser<string[]> => {
-  const [result, rest] = regExp(replaceCharacterClassAbbreviations(re))
+const buildRegExp = (regExpAsString: string): RegExpType => {
+  const [result, rest] = regExp(replaceCharacterClassAbbreviations(regExpAsString))
 
-  if (isError(result) || rest !== '') throw new Error('Invalid regular expression')
+  if (isError(result) || rest !== EMPTY_STRING) throw new Error('Invalid regular expression')
 
-  return andN(...result.map(part => evaluateRegExpPart(part)))
+  return result
 }
+
+const regExpParser = (regExpAsString: string): Parser<string> => {
+  const re = buildRegExp(regExpAsString)
+
+  return concat(andN(...re.map(part => evaluateRegExpPart(part))))
+}
+
+const match = (parser: Parser<string>, input: string): ParserResult<string> => {
+  let result!: string | Error
+  let rest!: string
+
+  // Try to match the regular expression from left to right.
+  for (let i = 0; i < input.length; i++) {
+    ;[result, rest] = parser(input.slice(i))
+
+    if (!isError(result)) return [result, rest]
+  }
+
+  return [result, rest]
+}
+
+const regExpMatcher =
+  (regExpAsString: string): Parser<string> =>
+  input => {
+    const parser = regExpParser(regExpAsString)
+
+    return match(parser, input)
+  }
+
+const scan =
+  (regExpAsString: string) =>
+  (input: string): string[] => {
+    let stop = false
+    let rest = input
+    const matches = []
+
+    const parser = regExpParser(regExpAsString)
+
+    while (!stop) {
+      const [result, remaining] = match(parser, rest)
+
+      if (!isError(result)) {
+        matches.push(result)
+
+        rest = remaining
+      }
+
+      if (isError(result) || remaining === EMPTY_STRING) stop = true
+    }
+
+    return matches.flat()
+  }
+
+declare const Deno: { inspect: (...args: unknown[]) => void }
+
+const print = (value: object) => console.log(Deno.inspect(value, { depth: 999, colors: true }))
+
+const showRegExp = (regExpAsString: string) => print(buildRegExp(regExpAsString))
