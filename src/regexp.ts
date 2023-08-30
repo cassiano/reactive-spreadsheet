@@ -39,8 +39,8 @@ type RepetitionLimitsType = {
   max: number
 }
 
-type RegExpSingleCharType = {
-  type: 'regExpSingleChar'
+type SingleCharType = {
+  type: 'singleChar'
   character: SingleChar
 }
 type CharacterClassType = {
@@ -48,8 +48,8 @@ type CharacterClassType = {
   negated: boolean
   options: [SingleChar | CharacterClassRangeType]
 }
-type ParenthesizedRegExpType = {
-  type: 'parenthesizedRegExp'
+type ParenthesizedType = {
+  type: 'parenthesized'
   expr: RegExpType
 }
 type AlternationType = {
@@ -64,9 +64,9 @@ type RepetitionType = {
 }
 
 type RegExpTypePart =
-  | RegExpSingleCharType
+  | SingleCharType
   | CharacterClassType
-  | ParenthesizedRegExpType
+  | ParenthesizedType
   | AlternationType
   | RepetitionType
 
@@ -103,7 +103,7 @@ const regExp: Parser<RegExpType> = many1(alternativeTerm)
 
 const regExpSingleChar = map(
   satisfy(c => !'*+?|{}[]()'.includes(c)),
-  character => ({ type: 'regExpSingleChar', character } as RegExpSingleCharType)
+  character => ({ type: 'singleChar', character } as SingleCharType)
 )
 
 const characterClassChar = satisfy(c => c !== ']')
@@ -130,10 +130,10 @@ const characterClass: Parser<CharacterClassType> = map(
     } as CharacterClassType)
 )
 
-const parenthesizedRegExp: Parser<ParenthesizedRegExpType> = map(
+const parenthesizedRegExp: Parser<ParenthesizedType> = map(
   delimitedBy(openParens, regExp, closeParens),
   expr => ({
-    type: 'parenthesizedRegExp',
+    type: 'parenthesized',
     expr,
   })
 )
@@ -170,10 +170,10 @@ const regExpfactor: Parser<RegExpTypePart> = map(
 
 const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
   switch (part.type) {
-    case 'regExpSingleChar':
+    case 'singleChar':
       return part.character === PERIOD ? anyChar() : char(part.character)
 
-    case 'parenthesizedRegExp':
+    case 'parenthesized':
       return concat(andN(part.expr.map(evaluateRegExpPart)))
 
     case 'characterClass': {
