@@ -73,7 +73,7 @@ type RegExpTypePart =
 
 type RegExpType = RegExpTypePart[]
 
-const REPETITION_LIMITS = {
+const QUANTIFIERS = {
   '*': { min: 0, max: Infinity },
   '+': { min: 1, max: Infinity },
   '?': { min: 0, max: 1 },
@@ -148,7 +148,7 @@ const repetition: Parser<RepetitionLimitsType> = map(
   ),
   result =>
     typeof result === 'string'
-      ? REPETITION_LIMITS[result as keyof typeof REPETITION_LIMITS]
+      ? QUANTIFIERS[result as keyof typeof QUANTIFIERS]
       : typeof result === 'number'
       ? { min: result, max: result }
       : {
