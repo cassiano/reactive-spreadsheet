@@ -230,7 +230,7 @@ const replaceCharacterClassAbbreviations = (re: string) => {
   return re
 }
 
-const buildRegExp = (regExpAsString: string): RegExpType => {
+export const buildRegExp = (regExpAsString: string): RegExpType => {
   const [result, rest] = regExp(replaceCharacterClassAbbreviations(regExpAsString))
 
   if (isError(result) || rest !== EMPTY_STRING) throw new Error('Invalid regular expression')
@@ -258,7 +258,7 @@ const match = (parser: Parser<string>, input: string): ParserResult<string> => {
   return [result, rest]
 }
 
-const regExpMatcher =
+export const regExpMatcher =
   (regExpAsString: string): Parser<string> =>
   input => {
     const parser = regExpParser(regExpAsString)
@@ -266,7 +266,7 @@ const regExpMatcher =
     return match(parser, input)
   }
 
-const scan =
+export const scan =
   (regExpAsString: string) =>
   (input: string): string[] => {
     let stop = false
@@ -292,6 +292,7 @@ const scan =
 
 declare const Deno: { inspect: (...args: unknown[]) => void }
 
-const print = (value: object) => console.log(Deno.inspect(value, { depth: 999, colors: true }))
+export const print = (value: object) =>
+  console.log(Deno.inspect(value, { depth: 999, colors: true }))
 
-const showRegExp = (regExpAsString: string) => print(buildRegExp(regExpAsString))
+export const showRegExp = (regExpAsString: string) => print(buildRegExp(regExpAsString))
