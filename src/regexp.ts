@@ -175,8 +175,8 @@ const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
       // Negated alternative:
       //
       // all(
-      //   part.options.map((c: SingleChar | CharacterClassRangeType) =>
-      //     typeof c === 'string' ? allButChar(c) : allButCharRange(c.from, c.to)
+      //   part.options.map(option =>
+      //     typeof option === 'string' ? allButChar(option) : allButCharRange(option.from, option.to)
       //   )
       // )
 
