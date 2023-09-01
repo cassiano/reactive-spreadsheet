@@ -221,8 +221,13 @@ const replaceCharacterClassAbbreviations = (re: string): string => {
   return re
 }
 
+const replaceEscapedChars = (re: string): string =>
+  re.replaceAll(/\\(.)/g, '[$1]').replaceAll(/\/(.)/g, '[$1]')
+
 export const buildRegExp = (regExpAsString: string): RegExpType => {
-  const [result, rest] = regExp(replaceCharacterClassAbbreviations(regExpAsString))
+  const [result, rest] = regExp(
+    replaceEscapedChars(replaceCharacterClassAbbreviations(regExpAsString))
+  )
 
   if (isError(result) || rest !== EMPTY_STRING) throw new Error('Invalid regular expression')
 
