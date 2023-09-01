@@ -84,7 +84,7 @@ const alternate = char('|')
 const alternativeTerm: Parser<RegExpTypePart> = input =>
   or(
     map(
-      and(succeededBy(many1(regExpfactor), alternate), many(alternativeTerm)),
+      and(succeededBy(many(regExpfactor), alternate), many(alternativeTerm)),
       ([left, right]) => ({
         type: 'alternation' as const,
         left,
