@@ -60,7 +60,7 @@ type AlternationType = {
 }
 type RepetitionType = {
   type: 'repetition'
-  expr: RegExpTypePart
+  expr: SingleCharType | CharacterClassType | ParenthesizedType
   limits: RepetitionLimitsType
 }
 
