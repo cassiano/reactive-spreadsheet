@@ -207,24 +207,28 @@ const CHARACTER_CLASS_ABBREVIATIONS: { [index: SingleChar]: string } = {
   r: '[\r\n]',
 }
 
-const replaceCharacterClassAbbreviations = (re: string): string => {
+const replaceCharacterClassAbbreviations = (regExpAsString: string): string => {
   Object.entries(CHARACTER_CLASS_ABBREVIATIONS).forEach(([abbrev, characterClass]) => {
     // Create regular abbreviations (\d, \h, \w etc, as well as /d, /h, /w etc).
-    re = re.replaceAll(`\\${abbrev}`, characterClass).replaceAll(`/${abbrev}`, characterClass)
+    regExpAsString = regExpAsString
+      .replaceAll(`\\${abbrev}`, characterClass)
+      .replaceAll(`/${abbrev}`, characterClass)
 
     // Create "negated" upper-cased abbreviations (\D, \H, \W etc, as well as /D, /H, /W etc).
     abbrev = abbrev.toUpperCase()
     characterClass = characterClass.slice(0, 1) + '^' + characterClass.slice(1)
-    re = re.replaceAll(`\\${abbrev}`, characterClass).replaceAll(`/${abbrev}`, characterClass)
+    regExpAsString = regExpAsString
+      .replaceAll(`\\${abbrev}`, characterClass)
+      .replaceAll(`/${abbrev}`, characterClass)
   })
 
-  return re
+  return regExpAsString
 }
 
-const replaceEscapedChars = (re: string): string =>
-  re.replaceAll(/\\(.)/g, '[$1]').replaceAll(/\/(.)/g, '[$1]')
+const replaceEscapedChars = (regExpAsString: string): string =>
+  regExpAsString.replaceAll(/\\(.)/g, '[$1]').replaceAll(/\/(.)/g, '[$1]')
 
-export const buildRegExp = (regExpAsString: string): RegExpType => {
+export const buildRegExpAST = (regExpAsString: string): RegExpType => {
   const [result, rest] = regExp(
     replaceEscapedChars(replaceCharacterClassAbbreviations(regExpAsString))
   )
@@ -235,9 +239,9 @@ export const buildRegExp = (regExpAsString: string): RegExpType => {
 }
 
 const regExpParser = (regExpAsString: string): Parser<string> => {
-  const re = buildRegExp(regExpAsString)
+  const regExpAST = buildRegExpAST(regExpAsString)
 
-  return concat(andN(re.map(evaluateRegExpPart)))
+  return concat(andN(regExpAST.map(evaluateRegExpPart)))
 }
 
 const match = (parser: Parser<string>, input: string): ParserResult<string> => {
@@ -291,4 +295,4 @@ declare const Deno: { inspect: (...args: unknown[]) => void }
 export const print = (value: object) =>
   console.log(Deno.inspect(value, { depth: 999, colors: true }))
 
-export const showRegExp = (regExpAsString: string) => print(buildRegExp(regExpAsString))
+export const showRegExp = (regExpAsString: string) => print(buildRegExpAST(regExpAsString))
