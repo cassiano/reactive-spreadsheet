@@ -169,6 +169,10 @@ export const none =
     return [input.slice(0, charsToConsume), input.slice(charsToConsume)]
   }
 
+export const none0 = none
+export const none1 = none({ charsToConsume: 1 })
+export const none2 = none({ charsToConsume: 2 })
+
 export type ManyNLimitsType = { min?: number; max?: number }
 
 export const manyN =
@@ -239,6 +243,9 @@ export const char = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c =>
 export const allButChar = (singleChar: SingleChar): Parser<SingleChar> =>
   satisfy(c => c !== singleChar)
 export const anyChar = (): Parser<SingleChar> => satisfy(_ => true)
+
+export const charSet = (set: string): Parser<SingleChar> => satisfy(c => set.includes(c))
+export const allButCharSet = (set: string): Parser<SingleChar> => satisfy(c => !set.includes(c))
 
 export const charSequence =
   (seq: string): Parser<string> =>
@@ -443,17 +450,6 @@ export type ExpressionType =
   | ParenthesizedExpressionType
   | FormulaFnCallType
 
-// https://stackoverflow.com/questions/2969561/how-to-parse-mathematical-expressions-involving-parentheses
-//
-// export const additionSubtractionTerm: Parser<ExpressionType> = input =>
-//   or(and3(multiplicationDivisionTerm, or(plus, minus), expression), multiplicationDivisionTerm)(input)
-// export const multiplicationDivisionTerm: Parser<ExpressionType> = input =>
-//   or(and3(exponentiationTerm, or(times, dividedBy), multiplicationDivisionTerm), exponentiationTerm)(input)
-// export const exponentiationTerm: Parser<ExpressionType> = input =>
-//   or(and3(factor, toThePowerOf, exponentiationTerm), factor)(input)
-// export const factor = or(operand, delimitedBy(openParens, expression, closeParens))
-// export const expression = additionSubtractionTerm
-
 export const ref = concat(
   map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()])
 )
@@ -465,17 +461,17 @@ export const createBinaryOperation = (
   left: ExpressionType,
   operator: OperatorType,
   right: ExpressionType
-) =>
-  ({
-    type: 'binaryOperation',
-    left,
-    operator,
-    right,
-  } as BinaryOperationType)
+): BinaryOperationType => ({
+  type: 'binaryOperation',
+  left,
+  operator,
+  right,
+})
 
 export const mapToBinaryOperation = (
   parser: Parser<[ExpressionType, OperatorType, ExpressionType]>
-) => map(parser, ([left, operator, right]) => createBinaryOperation(left, operator, right))
+): Parser<BinaryOperationType> =>
+  map(parser, ([left, operator, right]) => createBinaryOperation(left, operator, right))
 
 export const additiveTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
@@ -483,7 +479,7 @@ export const additiveTerm: Parser<ExpressionType> = input => {
       and3(multiplicativeTerm, or(add, subtract) as Parser<OperatorType>, additiveTerm)
     ),
     multiplicativeTerm
-  )(input) as ParserResult<ExpressionType>
+  )(input)
 
   if (isError(result)) return [result, input]
 
@@ -515,7 +511,7 @@ export const multiplicativeTerm: Parser<ExpressionType> = input => {
       and3(exponentialTerm, or(multiply, divide) as Parser<OperatorType>, multiplicativeTerm)
     ),
     exponentialTerm
-  )(input) as ParserResult<ExpressionType>
+  )(input)
 
   if (isError(result)) return [result, input]
 
@@ -541,11 +537,9 @@ export const multiplicativeTerm: Parser<ExpressionType> = input => {
 
 export const exponentialTerm: Parser<ExpressionType> = input =>
   or(
-    mapToBinaryOperation(
-      and3(factor as Parser<ExpressionType>, raise as Parser<OperatorType>, exponentialTerm)
-    ),
+    mapToBinaryOperation(and3(factor, raise as Parser<OperatorType>, exponentialTerm)),
     factor
-  )(input) as ParserResult<ExpressionType>
+  )(input)
 
 export const optionallySigned = <A extends ExpressionType>(parser: Parser<A>) =>
   map(and(optional(sign), parser), ([signChar, result]) =>
@@ -561,12 +555,12 @@ export const hexDigitToDecimal = (hexDigit: HexDigitType) => {
   )
 }
 
-export const binaryToDecimal = (binary: string) =>
+export const binaryToDecimal = (binary: string): number =>
   binary
     .split('')
     .reduce((acc, bit, i) => acc + +(bit as BitType) * BASE_2 ** (binary.length - 1 - i), 0)
 
-export const hexToDecimal = (hex: string) =>
+export const hexToDecimal = (hex: string): number =>
   hex
     .split('')
     .reduce(
@@ -575,7 +569,7 @@ export const hexToDecimal = (hex: string) =>
       0
     )
 
-export const operand = or(
+export const operand: Parser<ExpressionType> = or(
   map(or3(map(binaryNumber, binaryToDecimal), map(hexNumber, hexToDecimal), numeric), value => ({
     type: 'numeric',
     value,
@@ -583,7 +577,7 @@ export const operand = or(
   optionallySigned(map(ref, ref => ({ type: 'reference', ref })))
 )
 
-export const parenthesizedExpression = optionallySigned(
+export const parenthesizedExpression: Parser<ExpressionType> = optionallySigned(
   map(delimitedBy(openParens, expression, closeParens), expr => ({
     type: 'parenthesizedExpression',
     expr,
@@ -599,9 +593,9 @@ export const range: Parser<RangeType> = map(joinedBy(ref, colon), ([from, to]) =
   to,
 }))
 
-export const fnParameter = or(range, expression)
+export const fnParameter: Parser<ExpressionType | RangeType> = or(range, expression)
 
-export const formulaFnCall = map(
+export const formulaFnCall: Parser<FormulaFnCallType> = map(
   and(
     identifier,
     delimitedBy(
@@ -610,14 +604,13 @@ export const formulaFnCall = map(
       closeParens
     )
   ),
-  ([fnName, params]) =>
-    ({
-      type: 'formulaFnCall',
-      fnName,
-      parameters: params === EMPTY_STRING ? [] : params.flat(),
-    } as FormulaFnCallType)
+  ([fnName, params]) => ({
+    type: 'formulaFnCall',
+    fnName,
+    parameters: params === EMPTY_STRING ? [] : params.flat(),
+  })
 )
 
-export const factor = or3(operand, parenthesizedExpression, formulaFnCall)
+export const factor: Parser<ExpressionType> = or3(operand, parenthesizedExpression, formulaFnCall)
 
-export const formula = precededBy(equals, expression)
+export const formula: Parser<ExpressionType> = precededBy(equals, expression)

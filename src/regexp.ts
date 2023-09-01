@@ -14,11 +14,8 @@ import {
   openParens,
   optional,
   or,
-  or4,
-  satisfy,
   isError,
   or3,
-  and3,
   ParserResult,
   andN,
   charRange,
@@ -29,8 +26,11 @@ import {
   PERIOD,
   EMPTY_STRING,
   SingleChar,
-  none,
   allButChar,
+  many,
+  succeededBy,
+  allButCharSet,
+  none1,
 } from './parser_combinators.ts'
 
 type CharacterClassRangeType = { from: SingleChar; to: SingleChar }
@@ -47,7 +47,7 @@ type SingleCharType = {
 type CharacterClassType = {
   type: 'characterClass'
   negated: boolean
-  options: [SingleChar | CharacterClassRangeType]
+  options: (SingleChar | CharacterClassRangeType)[]
 }
 type ParenthesizedType = {
   type: 'parenthesized'
@@ -68,12 +68,12 @@ type RegExpTypePart =
   | SingleCharType
   | CharacterClassType
   | ParenthesizedType
-  | AlternationType
   | RepetitionType
+  | AlternationType
 
 type RegExpType = RegExpTypePart[]
 
-const QUANTIFIERS = {
+const QUANTIFIERS: { [index: SingleChar]: RepetitionLimitsType } = {
   '*': { min: 0, max: Infinity },
   '+': { min: 1, max: Infinity },
   '?': { min: 0, max: 1 },
@@ -81,54 +81,46 @@ const QUANTIFIERS = {
 
 const alternate = char('|')
 
-const alternativeTerm: Parser<RegExpTypePart> = input => {
-  const [result, rest] = or(
+const alternativeTerm: Parser<RegExpTypePart> = input =>
+  or(
     map(
-      and3(many1(regExpfactor), alternate, many1(alternativeTerm)),
-      ([left, _, right]) =>
-        ({
-          type: 'alternation',
-          left,
-          right,
-        } as AlternationType)
+      and(succeededBy(many1(regExpfactor), alternate), many(alternativeTerm)),
+      ([left, right]) => ({
+        type: 'alternation' as const,
+        left,
+        right,
+      })
     ),
     regExpfactor
-  )(input) as ParserResult<RegExpTypePart>
-
-  if (isError(result)) return [result, input]
-
-  return [result, rest]
-}
+  )(input)
 
 const regExp: Parser<RegExpType> = many1(alternativeTerm)
 
-const regExpSingleChar = map(
-  satisfy(c => !'*+?|{}[]()$^'.includes(c)),
+const regExpSingleChar: Parser<SingleCharType> = map(
+  allButCharSet('*+?|{}[]()$^'),
   character => ({ type: 'singleChar', character } as SingleCharType)
 )
 
+const dash = char('-')
 const characterClassChar = allButChar(']')
 
-const characterClassOption = or(
-  map(
-    or(joinedBy(letter, char('-')), joinedBy(digit, char('-'))),
-    range =>
-      ({
-        from: range[0].toString(),
-        to: range[1].toString(),
-      } as CharacterClassRangeType)
-  ),
+const characterClassOption: Parser<string | CharacterClassRangeType> = or(
+  map(or(joinedBy(letter, dash), joinedBy(digit, dash)), range => ({
+    from: range[0].toString(),
+    to: range[1].toString(),
+  })),
   characterClassChar
 )
 
+const CARET = '^'
+
 const characterClass: Parser<CharacterClassType> = map(
-  delimitedBy(char('['), and(optional(char('^')), many1(characterClassOption)), char(']')),
-  ([caret, options]) =>
-    ({
-      type: 'characterClass',
-      negated: caret === '^',
-      options,
-    } as CharacterClassType)
+  delimitedBy(char('['), and(optional(char(CARET)), many1(characterClassOption)), char(']')),
+  ([caret, options]) => ({
+    type: 'characterClass',
+    negated: caret === CARET,
+    options,
+  })
 )
 
 const parenthesizedRegExp: Parser<ParenthesizedType> = map(
@@ -139,11 +131,9 @@ const parenthesizedRegExp: Parser<ParenthesizedType> = map(
   })
 )
 
-const repetition: Parser<RepetitionLimitsType> = map(
-  or4(
-    char('*'),
-    char('+'),
-    char('?'),
+const quantifier: Parser<RepetitionLimitsType> = map(
+  or(
+    orN(Object.keys(QUANTIFIERS).map(quant => char(quant))),
     delimitedBy(char('{'), or(joinedBy(optional(natural), comma), natural), char('}'))
   ),
   result =>
@@ -158,15 +148,15 @@ const repetition: Parser<RepetitionLimitsType> = map(
 )
 
 const regExpfactor: Parser<RegExpTypePart> = map(
-  and(or3(regExpSingleChar, characterClass, parenthesizedRegExp), optional(repetition)),
+  and(or3(regExpSingleChar, characterClass, parenthesizedRegExp), optional(quantifier)),
   ([expr, limits]) =>
     limits === EMPTY_STRING
       ? expr
-      : ({
+      : {
           type: 'repetition',
           expr,
           limits,
-        } as RepetitionType)
+        }
 )
 
 const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
@@ -190,7 +180,7 @@ const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
       //   )
       // )
 
-      return !part.negated ? orN(optionsParser) : none({ charsToConsume: 1 })(optionsParser)
+      return !part.negated ? orN(optionsParser) : none1(optionsParser)
     }
 
     case 'repetition':
@@ -210,13 +200,14 @@ const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
 
 const CHARACTER_CLASS_ABBREVIATIONS: { [index: SingleChar]: string } = {
   d: '[0-9]',
+  b: '[0-1]',
   h: '[0-9a-fA-F]',
   w: '[0-9a-zA-Z_]',
   s: '[ \t\r\n\f]',
   r: '[\r\n]',
 }
 
-const replaceCharacterClassAbbreviations = (re: string) => {
+const replaceCharacterClassAbbreviations = (re: string): string => {
   Object.entries(CHARACTER_CLASS_ABBREVIATIONS).forEach(([abbrev, characterClass]) => {
     // Create regular abbreviations (\d, \h, \w etc, as well as /d, /h, /w etc).
     re = re.replaceAll(`\\${abbrev}`, characterClass).replaceAll(`/${abbrev}`, characterClass)
