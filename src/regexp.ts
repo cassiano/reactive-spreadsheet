@@ -97,7 +97,7 @@ const alternativeTerm: Parser<RegExpTypePart> = input =>
 const regExp: Parser<RegExpType> = many1(alternativeTerm)
 
 const regExpSingleChar: Parser<SingleCharType> = map(
-  allButCharSet('*+?|{}[]()$^'),
+  allButCharSet('*+?|{}[]()'),
   character => ({ type: 'singleChar', character } as SingleCharType)
 )
 
