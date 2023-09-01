@@ -199,12 +199,12 @@ const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
 }
 
 const CHARACTER_CLASS_ABBREVIATIONS: { [index: SingleChar]: string } = {
-  d: '[0-9]',
-  b: '[0-1]',
-  h: '[0-9a-fA-F]',
-  w: '[0-9a-zA-Z_]',
-  s: '[ \t\r\n\f]',
-  r: '[\r\n]',
+  d: '[0-9]', // d = Decimal digit
+  b: '[01]', // b = Binary digit (non-standard)
+  h: '[0-9a-fA-F]', // h = Hexadecimal digit
+  w: '[0-9a-zA-Z_]', // w = Word
+  s: '[ \t\r\n\f]', // s = Space
+  r: '[\r\n]', // r = Carriage return
 }
 
 const replaceCharacterClassAbbreviations = (regExpAsString: string): string => {
