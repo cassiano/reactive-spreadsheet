@@ -1,22 +1,22 @@
 import { RefType } from './spreadsheet_utils.ts'
 
-const error = (msg: string) => new Error(msg)
+export const error = (msg: string) => new Error(msg)
 
-const EMPTY_STRING = ''
+export const EMPTY_STRING = ''
 
-type ParserResult<T> = [resultOrError: T | Error, rest: string]
-type Parser<T> = (input: string) => ParserResult<T>
+export type ParserResult<T> = [resultOrError: T | Error, rest: string]
+export type Parser<T> = (input: string) => ParserResult<T>
 export type SingleChar = string
-type EmptyString = typeof EMPTY_STRING
+export type EmptyString = typeof EMPTY_STRING
 
 export const isError = <T>(result: T | Error): result is Error => result instanceof Error
 
-const satisfy =
+export const satisfy =
   (matchFn: (char: SingleChar) => boolean): Parser<SingleChar> =>
   input =>
     input.length > 0 && matchFn(input[0]) ? [input[0], input.slice(1)] : [error('no match'), input]
 
-const map =
+export const map =
   <A, B>(parser: Parser<A>, fn: (value: A) => B): Parser<B> =>
   input => {
     const [result, rest] = parser(input)
@@ -24,7 +24,7 @@ const map =
     return isError(result) ? [result, input] : [fn(result), rest]
   }
 
-const sequence =
+export const sequence =
   <A, B>(parser: Parser<A>, fn: (value: A) => Parser<B>): Parser<B> =>
   input => {
     const [result, rest] = parser(input)
@@ -32,29 +32,37 @@ const sequence =
     return isError(result) ? [result, input] : fn(result)(rest)
   }
 
-const or =
+// export const negated =
+//   (parser: Parser<SingleChar>): Parser<SingleChar> =>
+//   input => {
+//     const [result, _] = parser(input)
+
+//     return isError(result) ? [input[0], input.slice(1)] : [error('No match'), input]
+//   }
+
+export const or =
   <A, B>(parserA: Parser<A>, parserB: Parser<B>): Parser<A | B> =>
   input => {
     const [resultA, restA] = parserA(input)
 
     return isError(resultA) ? parserB(input) : [resultA, restA]
   }
-const or2 = or
+export const or2 = or
 
-const or3 = <A, B, C>(
+export const or3 = <A, B, C>(
   parserA: Parser<A>,
   parserB: Parser<B>,
   parserC: Parser<C>
 ): Parser<A | B | C> => or(parserA, or2(parserB, parserC))
 
-const or4 = <A, B, C, D>(
+export const or4 = <A, B, C, D>(
   parserA: Parser<A>,
   parserB: Parser<B>,
   parserC: Parser<C>,
   parserD: Parser<D>
 ): Parser<A | B | C | D> => or(parserA, or3(parserB, parserC, parserD))
 
-const or5 = <A, B, C, D, E>(
+export const or5 = <A, B, C, D, E>(
   parserA: Parser<A>,
   parserB: Parser<B>,
   parserC: Parser<C>,
@@ -62,18 +70,30 @@ const or5 = <A, B, C, D, E>(
   parserE: Parser<E>
 ): Parser<A | B | C | D | E> => or(parserA, or4(parserB, parserC, parserD, parserE))
 
-const and = <A, B>(parserA: Parser<A>, parserB: Parser<B>): Parser<[A, B]> =>
-  sequence(parserA, resultA => map(parserB, resultB => [resultA, resultB]))
-const and2 = and
+export const orN =
+  <T>(parsers: Parser<T>[]): Parser<T> =>
+  input => {
+    for (const parser of parsers) {
+      const [result, rest] = parser(input)
 
-const and3 = <A, B, C>(
+      if (!isError(result)) return [result, rest]
+    }
+
+    return [error(`(orN) none of ${parsers.length} parsers satisfied`), input]
+  }
+
+export const and = <A, B>(parserA: Parser<A>, parserB: Parser<B>): Parser<[A, B]> =>
+  sequence(parserA, resultA => map(parserB, resultB => [resultA, resultB]))
+export const and2 = and
+
+export const and3 = <A, B, C>(
   parserA: Parser<A>,
   parserB: Parser<B>,
   parserC: Parser<C>
 ): Parser<[A, B, C]> =>
   map(and(parserA, and2(parserB, parserC)), ([resultA, otherResults]) => [resultA, ...otherResults])
 
-const and4 = <A, B, C, D>(
+export const and4 = <A, B, C, D>(
   parserA: Parser<A>,
   parserB: Parser<B>,
   parserC: Parser<C>,
@@ -84,7 +104,7 @@ const and4 = <A, B, C, D>(
     ...otherResults,
   ])
 
-const and5 = <A, B, C, D, E>(
+export const and5 = <A, B, C, D, E>(
   parserA: Parser<A>,
   parserB: Parser<B>,
   parserC: Parser<C>,
@@ -96,94 +116,192 @@ const and5 = <A, B, C, D, E>(
     ...otherResults,
   ])
 
-type ManyOccurencesType = { minOccurences?: number; maxOccurences?: number }
-
-const manyN =
-  <A>(
-    parser: Parser<A>,
-    { minOccurences = 0, maxOccurences = Infinity }: ManyOccurencesType = {}
-  ): Parser<A[]> =>
+export const andN =
+  <T>(parsers: Parser<T>[]): Parser<T[]> =>
   input => {
-    if (maxOccurences === 0) return [[], input]
+    let rest = input
+    let result: T[] = []
+
+    for (const parser of parsers) {
+      const [tempResult, newRest] = parser(rest)
+
+      if (isError(tempResult)) return [tempResult, input]
+
+      rest = newRest
+      result.push(tempResult)
+    }
+
+    return [result, rest]
+  }
+
+export const all =
+  <T>(parsers: Parser<T>[]): Parser<T> =>
+  input => {
+    let rest = input
+    let result!: T | Error
+
+    if (parsers.length === 0) return [error('(all) no parsers specified'), input]
+
+    for (const parser of parsers) {
+      ;[result, rest] = parser(input)
+
+      if (isError(result)) return [result, input]
+    }
+
+    // Return right-most (last) match.
+    return [result, rest]
+  }
+
+// Might be used as both negative look-behind and negative look-ahead.
+export const none =
+  ({ charsToConsume = 0 } = {}) =>
+  <T>(parsers: Parser<T>[]): Parser<string> =>
+  input => {
+    if (input.length === 0) return [error(`(none) Empty input`), input]
+
+    for (const parser of parsers) {
+      const [result, _] = parser(input)
+
+      if (!isError(result))
+        return [error(`(none) One of the ${parsers.length} parsers satisfied`), input]
+    }
+
+    return [input.slice(0, charsToConsume), input.slice(charsToConsume)]
+  }
+
+export const none0 = none
+export const none1 = none({ charsToConsume: 1 })
+export const none2 = none({ charsToConsume: 2 })
+
+export type ManyNLimitsType = { min?: number; max?: number }
+
+export const manyN =
+  <A>(parser: Parser<A>, { min = 0, max = Infinity }: ManyNLimitsType = {}): Parser<A[]> =>
+  input => {
+    if (max === 0) return [[], input]
 
     const [result, rest] = parser(input)
 
-    if (isError(result)) return minOccurences > 0 ? [result, input] : [[], input]
+    if (isError(result)) return min > 0 ? [result, input] : [[], input]
 
-    return map(
-      manyN(parser, { minOccurences: minOccurences - 1, maxOccurences: maxOccurences - 1 }),
-      otherResults => [result, ...otherResults]
-    )(rest)
+    if (rest.length === input.length) {
+      // Successful match but no characters consumed. Avoid an infinite loop.
+      return [[], input]
+    }
+
+    return map(manyN(parser, { min: min - 1, max: max - 1 }), otherResults => [
+      result,
+      ...otherResults,
+    ])(rest)
   }
 
-const many = manyN
-const many0 = many
+export const many = manyN
+export const many0 = many
 
-const many1 = <A>(
+export const many1 = <A>(
   parser: Parser<A>,
-  { maxOccurences = Infinity }: ManyOccurencesType = {}
-): Parser<A[]> => manyN(parser, { minOccurences: 1, maxOccurences })
+  { max = Infinity }: ManyNLimitsType = {}
+): Parser<A[]> => manyN(parser, { min: 1, max })
 
-const many2 = <A>(
+export const many2 = <A>(
   parser: Parser<A>,
-  { maxOccurences = Infinity }: ManyOccurencesType = {}
-): Parser<A[]> => manyN(parser, { minOccurences: 2, maxOccurences })
+  { max = Infinity }: ManyNLimitsType = {}
+): Parser<A[]> => manyN(parser, { min: 2, max })
 
-const empty: Parser<EmptyString> = input => [EMPTY_STRING, input]
+export const empty: Parser<EmptyString> = input => [EMPTY_STRING, input]
 
-const optional = <A>(parser: Parser<A>): Parser<A | EmptyString> => or(parser, empty)
+export const optional = <A>(parser: Parser<A>): Parser<A | EmptyString> => or(parser, empty)
 // const optional = <A>(parser: Parser<A>): Parser<A | EmptyString> =>
 //   map(many(parser, { maxOccurences: 1 }), results => (results.length === 0 ? EMPTY_STRING : results[0]))
 
-const concat = (parser: Parser<string[]>): Parser<string> =>
+export const concat = (parser: Parser<string[]>): Parser<string> =>
   map(parser, chars => chars.join(EMPTY_STRING))
 
-const precededBy = <A>(parserBefore: Parser<unknown>, parser: Parser<A>): Parser<A> =>
+export const precededBy = <A>(parserBefore: Parser<unknown>, parser: Parser<A>): Parser<A> =>
   map(and(parserBefore, parser), ([_, result]) => result)
 
-const succeededBy = <A>(parser: Parser<A>, parserAfter: Parser<unknown>): Parser<A> =>
+export const succeededBy = <A>(parser: Parser<A>, parserAfter: Parser<unknown>): Parser<A> =>
   map(and(parser, parserAfter), ([result, _]) => result)
 
-const delimitedBy = <A>(
+export const delimitedBy = <A>(
   parserBefore: Parser<unknown>,
   parser: Parser<A>,
   parserAfter: Parser<unknown>
 ): Parser<A> => precededBy(parserBefore, succeededBy(parser, parserAfter))
 // map(and3(parserBefore, parser, parserAfter), ([_, result, __]) => result)
 
-const surroundedBy = <A>(parserBeforeAndAfter: Parser<unknown>, parser: Parser<A>): Parser<A> =>
-  delimitedBy(parserBeforeAndAfter, parser, parserBeforeAndAfter)
+export const surroundedBy = <A>(
+  parserBeforeAndAfter: Parser<unknown>,
+  parser: Parser<A>
+): Parser<A> => delimitedBy(parserBeforeAndAfter, parser, parserBeforeAndAfter)
 
-const joinedBy = <A>(parser: Parser<A>, parserInTheMiddle: Parser<unknown>): Parser<[A, A]> =>
+export const joinedBy = <A>(
+  parser: Parser<A>,
+  parserInTheMiddle: Parser<unknown>
+): Parser<[A, A]> =>
   map(and(succeededBy(parser, parserInTheMiddle), parser), ([result1, result2]) => [
     result1,
     result2,
   ])
 
-const char = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c === singleChar)
-const allButChar = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c !== singleChar)
-const anyChar = (): Parser<SingleChar> => satisfy(_ => true)
+export const char = (singleChar: SingleChar): Parser<SingleChar> => satisfy(c => c === singleChar)
+export const allButChar = (singleChar: SingleChar): Parser<SingleChar> =>
+  satisfy(c => c !== singleChar)
+export const anyChar = (): Parser<SingleChar> => satisfy(_ => true)
 
-const charSequence =
+export const charSet = (set: string): Parser<SingleChar> => satisfy(c => set.includes(c))
+export const allButCharSet = (set: string): Parser<SingleChar> => satisfy(c => !set.includes(c))
+
+export const charSequence =
   (seq: string): Parser<string> =>
   input =>
     input.startsWith(seq) ? [seq, input.slice(seq.length)] : [error('no match'), input]
 
 // const letter = satisfy(char => /[a-z]/i.test(char))
-const letter = satisfy(char => {
+export const letter = satisfy(char => {
   const upcasedChar = char.toUpperCase()
 
   return upcasedChar >= 'A' && upcasedChar <= 'Z'
 })
-const letters = many1(letter)
+export const letters = many1(letter)
 
 // Decimal.
-const digit = map(
+export const digit = map(
   // satisfy(char => /\d/.test(char)),
   satisfy(char => char >= '0' && char <= '9'),
   digit => +digit
 )
-const digits = many1(digit)
+export const digits = many1(digit)
+
+export const charRange = (from: SingleChar, to: SingleChar) =>
+  satisfy(char => char >= from && char <= to)
+
+export const allButCharRange = (from: SingleChar, to: SingleChar) =>
+  satisfy(char => !(char >= from && char <= to))
+
+export const numberRange =
+  ({ from = -Infinity, to = Infinity } = {}): Parser<number> =>
+  input => {
+    const [result, rest] = numeric(input)
+
+    if (isError(result)) return [result, input]
+    if (!(result >= from && result <= to))
+      return [error(`Number must be ≥ ${from} and ≤ ${to}, but was ${result}`), input]
+
+    return [result, rest]
+  }
+
+export const allButNumberRange =
+  ({ from = -Infinity, to = Infinity } = {}): Parser<number> =>
+  input => {
+    const [result, rest] = numeric(input)
+
+    if (isError(result)) return [result, input]
+    if (result >= from && result <= to)
+      return [error(`Number must be ≤ ${from} and ≥ ${to}, but was ${result}`), input]
+
+    return [result, rest]
+  }
 
 export type HexDigitType =
   | '0'
@@ -210,46 +328,46 @@ export type HexDigitType =
   | 'f'
 
 // Hexadecimal.
-const hexDigit = satisfy(char => {
-  const upcasedChar = char.toUpperCase()
+export const hexDigit = or3(
+  charRange('0', '9'),
+  charRange('A', 'F'),
+  charRange('a', 'f')
+) as Parser<HexDigitType>
+export const hexDigits = many1(hexDigit)
+export const hexNumber = concat(precededBy(charSequence('0x'), hexDigits))
 
-  return (upcasedChar >= '0' && upcasedChar <= '9') || (upcasedChar >= 'A' && upcasedChar <= 'F')
-}) as Parser<HexDigitType>
-const hexDigits = many1(hexDigit)
-const hexNumber = concat(precededBy(charSequence('0x'), hexDigits))
-
-type BitType = '0' | '1'
+export type BitType = '0' | '1'
 
 // Binary.
-const ZERO = '0'
-const ONE = '1'
-const zero = char(ZERO)
-const one = char(ONE)
-const bit = or(zero, one) as Parser<BitType>
-const binaryDigits = many1(bit)
-const binaryNumber = concat(precededBy(charSequence('0b'), binaryDigits))
+export const ZERO = '0'
+export const ONE = '1'
+export const zero = char(ZERO)
+export const one = char(ONE)
+export const bit = or(zero, one) as Parser<BitType>
+export const binaryDigits = many1(bit)
+export const binaryNumber = concat(precededBy(charSequence('0b'), binaryDigits))
 
-const SPACE = ' '
+export const SPACE = ' '
 
-const spaced = <A>(parser: Parser<A>): Parser<A> => surroundedBy(many(char(SPACE)), parser)
+export const spaced = <A>(parser: Parser<A>): Parser<A> => surroundedBy(many(char(SPACE)), parser)
 
-const DOUBLE_QUOTE = '"'
-const SINGLE_QUOTE = "'"
-const BACK_TICK = '`'
-const UNDERSCORE = '_'
-const PLUS_SIGN = '+'
-const MINUS_SIGN = '-'
-const PERIOD = '.'
+export const DOUBLE_QUOTE = '"'
+export const SINGLE_QUOTE = "'"
+export const BACK_TICK = '`'
+export const UNDERSCORE = '_'
+export const PLUS_SIGN = '+'
+export const MINUS_SIGN = '-'
+export const PERIOD = '.'
 
-const doubleQuote = char(DOUBLE_QUOTE)
-const singleQuote = char(SINGLE_QUOTE)
-const backTick = char(BACK_TICK)
-const underscore = char(UNDERSCORE)
-const plus = char(PLUS_SIGN)
-const minus = char(MINUS_SIGN)
-const period = char(PERIOD)
+export const doubleQuote = char(DOUBLE_QUOTE)
+export const singleQuote = char(SINGLE_QUOTE)
+export const backTick = char(BACK_TICK)
+export const underscore = char(UNDERSCORE)
+export const plus = char(PLUS_SIGN)
+export const minus = char(MINUS_SIGN)
+export const period = char(PERIOD)
 
-const string = concat(
+export const string = concat(
   or3(
     surroundedBy(doubleQuote, many(allButChar(DOUBLE_QUOTE))),
     surroundedBy(singleQuote, many(allButChar(SINGLE_QUOTE))),
@@ -257,41 +375,34 @@ const string = concat(
   )
 )
 
-const wordChar = map(or3(letter, digit, underscore), res => res.toString())
-const word = concat(many1(wordChar))
-const identifier = word
+export const wordChar = map(or3(letter, digit, underscore), res => res.toString())
+export const word = concat(many1(wordChar))
+export const identifier = word
 
-const sign = or(plus, minus)
+export const sign = or(plus, minus)
 
-const BASE_2 = 2
-const BASE_10 = 10
-const BASE_16 = 16
+export const BASE_2 = 2
+export const BASE_10 = 10
+export const BASE_16 = 16
 
-const natural = map(precededBy(optional(plus), digits), digs =>
+export const natural = map(precededBy(optional(plus), digits), digs =>
   digs.reduce((acc, dig, i) => acc + dig * BASE_10 ** (digs.length - (i + 1)), 0)
 )
 
-const integer = map(
+export const integer = map(
   and(optional(sign), natural),
   ([signChar, nat]) => (signChar === MINUS_SIGN ? -1 : 1) * nat
 )
 
-const naturalGreaterThanZero: Parser<number> = input => {
-  const [result, rest] = natural(input)
+export const naturalGreaterThanZero = numberRange({ from: 1 })
 
-  if (isError(result)) return [result, input]
-  if (!(result > 0)) return [error(`Number must be > 0, but was ${result}`), input]
-
-  return [result, rest]
-}
-
-const float = map(
+export const float = map(
   and(integer, precededBy(period, natural)),
   ([int, nat]) =>
     int + (nat === 0 ? 0 : (Math.sign(int) * nat) / BASE_10 ** Math.trunc(Math.log10(nat) + 1))
 )
 
-const numeric = or(float, integer)
+export const numeric = or(float, integer)
 
 export const ADD = '+'
 export const SUBTRACT = '-'
@@ -303,14 +414,14 @@ export const OPEN_PARENS = '('
 export const CLOSE_PARENS = ')'
 export const EQUALS = '='
 
-const add = spaced(char(ADD))
-const subtract = spaced(char(SUBTRACT))
-const multiply = spaced(char(MULTIPLY))
-const divide = spaced(char(DIVIDE))
-const raise = spaced(or(char(RAISE), charSequence(RAISE_ALT)))
-const openParens = spaced(char(OPEN_PARENS))
-const closeParens = spaced(char(CLOSE_PARENS))
-const equals = spaced(char(EQUALS))
+export const add = spaced(char(ADD))
+export const subtract = spaced(char(SUBTRACT))
+export const multiply = spaced(char(MULTIPLY))
+export const divide = spaced(char(DIVIDE))
+export const raise = spaced(or(char(RAISE), charSequence(RAISE_ALT)))
+export const openParens = spaced(char(OPEN_PARENS))
+export const closeParens = spaced(char(CLOSE_PARENS))
+export const equals = spaced(char(EQUALS))
 
 export type OperatorType =
   | typeof ADD
@@ -344,46 +455,36 @@ export type ExpressionType =
   | ParenthesizedExpressionType
   | FormulaFnCallType
 
-// https://stackoverflow.com/questions/2969561/how-to-parse-mathematical-expressions-involving-parentheses
-//
-// const additionSubtractionTerm: Parser<ExpressionType> = input =>
-//   or(and3(multiplicationDivisionTerm, or(plus, minus), expression), multiplicationDivisionTerm)(input)
-// const multiplicationDivisionTerm: Parser<ExpressionType> = input =>
-//   or(and3(exponentiationTerm, or(times, dividedBy), multiplicationDivisionTerm), exponentiationTerm)(input)
-// const exponentiationTerm: Parser<ExpressionType> = input =>
-//   or(and3(factor, toThePowerOf, exponentiationTerm), factor)(input)
-// const factor = or(operand, delimitedBy(openParens, expression, closeParens))
-// const expression = additionSubtractionTerm
-
-const ref = concat(
+export const ref = concat(
   map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()])
 )
 
-const NUMBER_1: NumericType = { type: 'numeric', value: 1 }
-const NUMBER_MINUS_1: NumericType = { type: 'numeric', value: -1 }
+export const NUMBER_1: NumericType = { type: 'numeric', value: 1 }
+export const NUMBER_MINUS_1: NumericType = { type: 'numeric', value: -1 }
 
-const createBinaryOperation = (
+export const createBinaryOperation = (
   left: ExpressionType,
   operator: OperatorType,
   right: ExpressionType
-) =>
-  ({
-    type: 'binaryOperation',
-    left,
-    operator,
-    right,
-  } as BinaryOperationType)
+): BinaryOperationType => ({
+  type: 'binaryOperation',
+  left,
+  operator,
+  right,
+})
 
-const mapToBinaryOperation = (parser: Parser<[ExpressionType, OperatorType, ExpressionType]>) =>
+export const mapToBinaryOperation = (
+  parser: Parser<[ExpressionType, OperatorType, ExpressionType]>
+): Parser<BinaryOperationType> =>
   map(parser, ([left, operator, right]) => createBinaryOperation(left, operator, right))
 
-const additiveTerm: Parser<ExpressionType> = input => {
+export const additiveTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
     mapToBinaryOperation(
       and3(multiplicativeTerm, or(add, subtract) as Parser<OperatorType>, additiveTerm)
     ),
     multiplicativeTerm
-  )(input) as ParserResult<ExpressionType>
+  )(input)
 
   if (isError(result)) return [result, input]
 
@@ -407,15 +508,15 @@ const additiveTerm: Parser<ExpressionType> = input => {
   return [result, rest]
 }
 
-const expression = additiveTerm
+export const expression = additiveTerm
 
-const multiplicativeTerm: Parser<ExpressionType> = input => {
+export const multiplicativeTerm: Parser<ExpressionType> = input => {
   const [result, rest] = or(
     mapToBinaryOperation(
       and3(exponentialTerm, or(multiply, divide) as Parser<OperatorType>, multiplicativeTerm)
     ),
     exponentialTerm
-  )(input) as ParserResult<ExpressionType>
+  )(input)
 
   if (isError(result)) return [result, input]
 
@@ -439,20 +540,18 @@ const multiplicativeTerm: Parser<ExpressionType> = input => {
   return [result, rest]
 }
 
-const exponentialTerm: Parser<ExpressionType> = input =>
+export const exponentialTerm: Parser<ExpressionType> = input =>
   or(
-    mapToBinaryOperation(
-      and3(factor as Parser<ExpressionType>, raise as Parser<OperatorType>, exponentialTerm)
-    ),
+    mapToBinaryOperation(and3(factor, raise as Parser<OperatorType>, exponentialTerm)),
     factor
-  )(input) as ParserResult<ExpressionType>
+  )(input)
 
-const optionallySigned = <A extends ExpressionType>(parser: Parser<A>) =>
+export const optionallySigned = <A extends ExpressionType>(parser: Parser<A>) =>
   map(and(optional(sign), parser), ([signChar, result]) =>
     signChar === MINUS_SIGN ? createBinaryOperation(NUMBER_MINUS_1, MULTIPLY, result) : result
   )
 
-const hexDigitToDecimal = (hexDigit: HexDigitType) => {
+export const hexDigitToDecimal = (hexDigit: HexDigitType) => {
   hexDigit = hexDigit.toUpperCase() as HexDigitType
 
   return (
@@ -461,12 +560,12 @@ const hexDigitToDecimal = (hexDigit: HexDigitType) => {
   )
 }
 
-const binaryToDecimal = (binary: string) =>
+export const binaryToDecimal = (binary: string): number =>
   binary
     .split('')
     .reduce((acc, bit, i) => acc + +(bit as BitType) * BASE_2 ** (binary.length - 1 - i), 0)
 
-const hexToDecimal = (hex: string) =>
+export const hexToDecimal = (hex: string): number =>
   hex
     .split('')
     .reduce(
@@ -475,7 +574,7 @@ const hexToDecimal = (hex: string) =>
       0
     )
 
-const operand = or(
+export const operand: Parser<ExpressionType> = or(
   map(or3(map(binaryNumber, binaryToDecimal), map(hexNumber, hexToDecimal), numeric), value => ({
     type: 'numeric',
     value,
@@ -483,25 +582,25 @@ const operand = or(
   optionallySigned(map(ref, ref => ({ type: 'reference', ref })))
 )
 
-const parenthesizedExpression = optionallySigned(
+export const parenthesizedExpression: Parser<ExpressionType> = optionallySigned(
   map(delimitedBy(openParens, expression, closeParens), expr => ({
     type: 'parenthesizedExpression',
     expr,
   }))
 )
 
-const colon = spaced(char(':'))
-const comma = spaced(char(','))
+export const colon = spaced(char(':'))
+export const comma = spaced(char(','))
 
-const range: Parser<RangeType> = map(joinedBy(ref, colon), ([from, to]) => ({
+export const range: Parser<RangeType> = map(joinedBy(ref, colon), ([from, to]) => ({
   type: 'range',
   from,
   to,
 }))
 
-const fnParameter = or(range, expression)
+export const fnParameter: Parser<ExpressionType | RangeType> = or(range, expression)
 
-const formulaFnCall = map(
+export const formulaFnCall: Parser<FormulaFnCallType> = map(
   and(
     identifier,
     delimitedBy(
@@ -510,14 +609,13 @@ const formulaFnCall = map(
       closeParens
     )
   ),
-  ([fnName, params]) =>
-    ({
-      type: 'formulaFnCall',
-      fnName,
-      parameters: params === EMPTY_STRING ? [] : params.flat(),
-    } as FormulaFnCallType)
+  ([fnName, params]) => ({
+    type: 'formulaFnCall',
+    fnName,
+    parameters: params === EMPTY_STRING ? [] : params.flat(),
+  })
 )
 
-const factor = or3(operand, parenthesizedExpression, formulaFnCall)
+export const factor: Parser<ExpressionType> = or3(operand, parenthesizedExpression, formulaFnCall)
 
-export const formula = precededBy(equals, expression)
+export const formula: Parser<ExpressionType> = precededBy(equals, expression)
