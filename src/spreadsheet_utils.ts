@@ -21,6 +21,7 @@ import {
   GREATER_THAN_OR_EQUAL_TO_ALT,
   LESS_THAN,
   GREATER_THAN,
+  FnParameterType,
 } from './parser_combinators.ts'
 import {
   ComputedSignalKind,
@@ -232,6 +233,17 @@ const evaluateBooleanExpression = (
   }
 }
 
+const evaluateParam = (sheet: SheetType, param: FnParameterType) => {
+  switch (param.type) {
+    case 'range':
+      return evaluateRange(sheet, param)
+    case 'booleanExpression':
+      return evaluateBooleanExpression(sheet, param)
+    default:
+      return evaluateExpression(sheet, param)
+  }
+}
+
 const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
   switch (expr.type) {
     case 'numeric':
@@ -267,17 +279,7 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
 
     case 'formulaFnCall':
       const fnName = expr.fnName.toLocaleLowerCase()
-
-      const parameters = expr.parameters.map(param => {
-        switch (param.type) {
-          case 'range':
-            return evaluateRange(sheet, param)
-          case 'booleanExpression':
-            return evaluateBooleanExpression(sheet, param)
-          default:
-            return evaluateExpression(sheet, param)
-        }
-      })
+      const parameters = expr.parameters.map(param => evaluateParam(sheet, param))
 
       if (fnName in FORMULA_FUNCTIONS) {
         // TODO: Review code below.

@@ -471,6 +471,8 @@ export type BooleanOperatorType =
 
 export type RangeType = { type: 'range'; from: RefType; to: RefType }
 
+export type FnParameterType = ExpressionType | BooleanExpressionType | RangeType
+
 type BinaryOperationType = {
   type: 'binaryOperation'
   left: ExpressionType
@@ -483,7 +485,7 @@ type ParenthesizedExpressionType = { type: 'parenthesizedExpression'; expr: Expr
 type FormulaFnCallType = {
   type: 'formulaFnCall'
   fnName: string
-  parameters: (RangeType | BooleanExpressionType | ExpressionType)[]
+  parameters: FnParameterType[]
 }
 
 export type ExpressionType =
@@ -664,11 +666,7 @@ export const booleanExpression: Parser<BooleanExpressionType> = map(
   })
 )
 
-export const fnParameter: Parser<ExpressionType | BooleanExpressionType | RangeType> = or3(
-  range,
-  booleanExpression,
-  expression
-)
+export const fnParameter: Parser<FnParameterType> = or3(range, booleanExpression, expression)
 
 export const formulaFnCall: Parser<FormulaFnCallType> = map(
   and(
