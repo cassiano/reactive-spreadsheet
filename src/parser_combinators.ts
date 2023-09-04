@@ -451,7 +451,7 @@ export const lessThanOrEqualTo = spaced(
   orN([LESS_THAN_OR_EQUAL_TO, LESS_THAN_OR_EQUAL_TO_ALT].map(charSequence))
 )
 export const greaterThanOrEqualTo = spaced(
-  orN([EQUAL_TO, GREATER_THAN_OR_EQUAL_TO_ALT].map(charSequence))
+  orN([GREATER_THAN_OR_EQUAL_TO, GREATER_THAN_OR_EQUAL_TO_ALT].map(charSequence))
 )
 export const lessThan = spaced(charSequence(LESS_THAN))
 export const greaterThan = spaced(charSequence(GREATER_THAN))
