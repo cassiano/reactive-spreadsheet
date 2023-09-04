@@ -414,14 +414,14 @@ export const OPEN_PARENS = '('
 export const CLOSE_PARENS = ')'
 export const EQUALS = '='
 
-export const add = spaced(char(ADD))
-export const subtract = spaced(char(SUBTRACT))
-export const multiply = spaced(char(MULTIPLY))
-export const divide = spaced(char(DIVIDE))
-export const raise = spaced(or(char(RAISE), charSequence(RAISE_ALT)))
-export const openParens = spaced(char(OPEN_PARENS))
-export const closeParens = spaced(char(CLOSE_PARENS))
-export const equals = spaced(char(EQUALS))
+export const add = spaced(charSequence(ADD))
+export const subtract = spaced(charSequence(SUBTRACT))
+export const multiply = spaced(charSequence(MULTIPLY))
+export const divide = spaced(charSequence(DIVIDE))
+export const raise = spaced(orN([RAISE, RAISE_ALT].map(charSequence)))
+export const openParens = spaced(charSequence(OPEN_PARENS))
+export const closeParens = spaced(charSequence(CLOSE_PARENS))
+export const equals = spaced(charSequence(EQUALS))
 
 export type OperatorType =
   | typeof ADD
@@ -443,18 +443,18 @@ export const GREATER_THAN_OR_EQUAL_TO_ALT = '>='
 export const LESS_THAN = '<'
 export const GREATER_THAN = '>'
 
-export const equalTo = spaced(or(charSequence(EQUAL_TO), char(EQUAL_TO_ALT)))
+export const equalTo = spaced(orN([EQUAL_TO, EQUAL_TO_ALT].map(charSequence)))
 export const differentFrom = spaced(
-  or3(char(DIFFERENT_FROM), charSequence(DIFFERENT_FROM_ALT1), charSequence(DIFFERENT_FROM_ALT2))
+  orN([DIFFERENT_FROM, DIFFERENT_FROM_ALT1, DIFFERENT_FROM_ALT2].map(charSequence))
 )
 export const lessThanOrEqualTo = spaced(
-  or(char(LESS_THAN_OR_EQUAL_TO), charSequence(LESS_THAN_OR_EQUAL_TO_ALT))
+  orN([LESS_THAN_OR_EQUAL_TO, LESS_THAN_OR_EQUAL_TO_ALT].map(charSequence))
 )
 export const greaterThanOrEqualTo = spaced(
-  or(char(GREATER_THAN_OR_EQUAL_TO), charSequence(GREATER_THAN_OR_EQUAL_TO_ALT))
+  orN([EQUAL_TO, GREATER_THAN_OR_EQUAL_TO_ALT].map(charSequence))
 )
-export const lessThan = spaced(char(LESS_THAN))
-export const greaterThan = spaced(char(GREATER_THAN))
+export const lessThan = spaced(charSequence(LESS_THAN))
+export const greaterThan = spaced(charSequence(GREATER_THAN))
 
 export type BooleanOperatorType =
   | typeof EQUAL_TO
