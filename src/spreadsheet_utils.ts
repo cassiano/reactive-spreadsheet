@@ -9,6 +9,18 @@ import {
   SUBTRACT,
   formula,
   isError,
+  BooleanExpressionType,
+  EQUAL_TO,
+  EQUAL_TO_ALT,
+  DIFFERENT_FROM,
+  DIFFERENT_FROM_ALT1,
+  DIFFERENT_FROM_ALT2,
+  LESS_THAN_OR_EQUAL_TO,
+  LESS_THAN_OR_EQUAL_TO_ALT,
+  GREATER_THAN_OR_EQUAL_TO,
+  GREATER_THAN_OR_EQUAL_TO_ALT,
+  LESS_THAN,
+  GREATER_THAN,
 } from './parser_combinators.ts'
 import {
   ComputedSignalKind,
@@ -166,12 +178,59 @@ const FORMULA_FUNCTIONS = {
 
     return args[0][0].length
   },
+  if: function (args: (number | number[][])[]) {
+    // Does not trigger TS's type narrowing:
+    // if (!(args.length === 3 && args.every(arg => typeof arg === 'number')))
+    if (
+      !(
+        args.length === 3 &&
+        typeof args[0] === 'number' &&
+        typeof args[1] === 'number' &&
+        typeof args[2] === 'number'
+      )
+    )
+      throw new Error(`Invalid arguments passed to function 'if'`)
+
+    return args[0] !== 0 ? args[1] : args[2]
+  },
 }
 
 const evaluateRange = (sheet: SheetType, range: RangeType) =>
   expandRange(range.from, range.to).map(row =>
     row.map(ref => findOrCreateAndEvaluateCell(sheet, ref.toUpperCase()))
   )
+
+const evaluateBooleanExpression = (
+  sheet: SheetType,
+  booleanExpr: BooleanExpressionType
+): number => {
+  const booleanToNumber = (value: boolean) => (value === true ? 1 : 0)
+
+  const left = evaluateExpression(sheet, booleanExpr.left)
+  const right = evaluateExpression(sheet, booleanExpr.right)
+
+  switch (booleanExpr.operator) {
+    case EQUAL_TO:
+    case EQUAL_TO_ALT:
+      return booleanToNumber(left === right)
+    case DIFFERENT_FROM:
+    case DIFFERENT_FROM_ALT1:
+    case DIFFERENT_FROM_ALT2:
+      return booleanToNumber(left !== right)
+    case LESS_THAN:
+      return booleanToNumber(left < right)
+    case LESS_THAN_OR_EQUAL_TO:
+    case LESS_THAN_OR_EQUAL_TO_ALT:
+      return booleanToNumber(left <= right)
+    case GREATER_THAN:
+      return booleanToNumber(left > right)
+    case GREATER_THAN_OR_EQUAL_TO:
+    case GREATER_THAN_OR_EQUAL_TO_ALT:
+      return booleanToNumber(left >= right)
+    default:
+      throw new Error(`Invalid operator ${booleanExpr.operator}`)
+  }
+}
 
 const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
   switch (expr.type) {
@@ -209,9 +268,16 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
     case 'formulaFnCall':
       const fnName = expr.fnName.toLocaleLowerCase()
 
-      const parameters = expr.parameters.map(param =>
-        param.type === 'range' ? evaluateRange(sheet, param) : evaluateExpression(sheet, param)
-      )
+      const parameters = expr.parameters.map(param => {
+        switch (param.type) {
+          case 'range':
+            return evaluateRange(sheet, param)
+          case 'booleanExpression':
+            return evaluateBooleanExpression(sheet, param)
+          default:
+            return evaluateExpression(sheet, param)
+        }
+      })
 
       if (fnName in FORMULA_FUNCTIONS) {
         // TODO: Review code below.

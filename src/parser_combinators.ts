@@ -431,6 +431,44 @@ export type OperatorType =
   | typeof RAISE
   | typeof RAISE_ALT
 
+export const EQUAL_TO = '=='
+export const EQUAL_TO_ALT = '='
+export const DIFFERENT_FROM = '≠'
+export const DIFFERENT_FROM_ALT1 = '<>'
+export const DIFFERENT_FROM_ALT2 = '!='
+export const LESS_THAN_OR_EQUAL_TO = '≤'
+export const LESS_THAN_OR_EQUAL_TO_ALT = '<='
+export const GREATER_THAN_OR_EQUAL_TO = '≥'
+export const GREATER_THAN_OR_EQUAL_TO_ALT = '>='
+export const LESS_THAN = '<'
+export const GREATER_THAN = '>'
+
+export const equalTo = spaced(or(charSequence(EQUAL_TO), char(EQUAL_TO_ALT)))
+export const differentFrom = spaced(
+  or3(char(DIFFERENT_FROM), charSequence(DIFFERENT_FROM_ALT1), charSequence(DIFFERENT_FROM_ALT2))
+)
+export const lessThanOrEqualTo = spaced(
+  or(char(LESS_THAN_OR_EQUAL_TO), charSequence(LESS_THAN_OR_EQUAL_TO_ALT))
+)
+export const greaterThanOrEqualTo = spaced(
+  or(char(GREATER_THAN_OR_EQUAL_TO), charSequence(GREATER_THAN_OR_EQUAL_TO_ALT))
+)
+export const lessThan = spaced(char(LESS_THAN))
+export const greaterThan = spaced(char(GREATER_THAN))
+
+export type BooleanOperatorType =
+  | typeof EQUAL_TO
+  | typeof EQUAL_TO_ALT
+  | typeof DIFFERENT_FROM
+  | typeof DIFFERENT_FROM_ALT1
+  | typeof DIFFERENT_FROM_ALT2
+  | typeof LESS_THAN_OR_EQUAL_TO
+  | typeof LESS_THAN_OR_EQUAL_TO_ALT
+  | typeof GREATER_THAN_OR_EQUAL_TO
+  | typeof GREATER_THAN_OR_EQUAL_TO_ALT
+  | typeof LESS_THAN
+  | typeof GREATER_THAN
+
 export type RangeType = { type: 'range'; from: RefType; to: RefType }
 
 type BinaryOperationType = {
@@ -445,7 +483,7 @@ type ParenthesizedExpressionType = { type: 'parenthesizedExpression'; expr: Expr
 type FormulaFnCallType = {
   type: 'formulaFnCall'
   fnName: string
-  parameters: (RangeType | ExpressionType)[]
+  parameters: (RangeType | BooleanExpressionType | ExpressionType)[]
 }
 
 export type ExpressionType =
@@ -454,6 +492,13 @@ export type ExpressionType =
   | ReferenceType
   | ParenthesizedExpressionType
   | FormulaFnCallType
+
+export type BooleanExpressionType = {
+  type: 'booleanExpression'
+  left: ExpressionType
+  operator: BooleanOperatorType
+  right: ExpressionType
+}
 
 export const ref = concat(
   map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()])
@@ -598,7 +643,32 @@ export const range: Parser<RangeType> = map(joinedBy(ref, colon), ([from, to]) =
   to,
 }))
 
-export const fnParameter: Parser<ExpressionType | RangeType> = or(range, expression)
+export const booleanExpression: Parser<BooleanExpressionType> = map(
+  and3(
+    expression,
+    orN([
+      equalTo,
+      differentFrom,
+      lessThanOrEqualTo,
+      greaterThanOrEqualTo,
+      lessThan,
+      greaterThan,
+    ]) as Parser<BooleanOperatorType>,
+    expression
+  ),
+  ([left, operator, right]) => ({
+    type: 'booleanExpression',
+    left,
+    operator,
+    right,
+  })
+)
+
+export const fnParameter: Parser<ExpressionType | BooleanExpressionType | RangeType> = or3(
+  range,
+  booleanExpression,
+  expression
+)
 
 export const formulaFnCall: Parser<FormulaFnCallType> = map(
   and(
@@ -619,3 +689,10 @@ export const formulaFnCall: Parser<FormulaFnCallType> = map(
 export const factor: Parser<ExpressionType> = or3(operand, parenthesizedExpression, formulaFnCall)
 
 export const formula: Parser<ExpressionType> = precededBy(equals, expression)
+
+declare const Deno: {
+  inspect: (...args: unknown[]) => void
+}
+
+export const print = (value: object) =>
+  console.log(Deno.inspect(value, { depth: 999, colors: true }))
