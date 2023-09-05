@@ -31,6 +31,8 @@ import {
   succeededBy,
   allButCharSet,
   none1,
+  or4,
+  charSequence,
 } from './parser_combinators.ts'
 
 type CharacterClassRangeType = { from: SingleChar; to: SingleChar }
@@ -73,7 +75,7 @@ type RegExpTypePart =
 
 type RegExpType = RegExpTypePart[]
 
-const QUANTIFIERS: { [index: SingleChar]: RepetitionLimitsType } = {
+const QUANTIFIERS: { [quantifier: SingleChar]: RepetitionLimitsType } = {
   '*': { min: 0, max: Infinity },
   '+': { min: 1, max: Infinity },
   '?': { min: 0, max: 1 },
@@ -97,7 +99,7 @@ const alternativeTerm: Parser<RegExpTypePart> = input =>
 const regExp: Parser<RegExpType> = many1(alternativeTerm)
 
 const regExpSingleChar: Parser<SingleCharType> = map(
-  allButCharSet('*+?|{}[]()'),
+  allButCharSet('|{}[]()' + Object.keys(QUANTIFIERS).join(EMPTY_STRING)),
   character => ({ type: 'singleChar', character } as SingleCharType)
 )
 
@@ -114,7 +116,7 @@ const characterClassOption: Parser<string | CharacterClassRangeType> = or(
 
 const CARET = '^'
 
-const characterClass: Parser<CharacterClassType> = map(
+const characterClassRegExp: Parser<CharacterClassType> = map(
   delimitedBy(char('['), and(optional(char(CARET)), many1(characterClassOption)), char(']')),
   ([caret, options]) => ({
     type: 'characterClass',
@@ -133,7 +135,7 @@ const parenthesizedRegExp: Parser<ParenthesizedType> = map(
 
 const quantifier: Parser<RepetitionLimitsType> = map(
   or(
-    orN(Object.keys(QUANTIFIERS).map(quant => char(quant))),
+    orN(Object.keys(QUANTIFIERS).map(charSequence)),
     delimitedBy(char('{'), or(joinedBy(optional(natural), comma), natural), char('}'))
   ),
   result =>
@@ -147,16 +149,32 @@ const quantifier: Parser<RepetitionLimitsType> = map(
         }
 )
 
-const regExpfactor: Parser<RegExpTypePart> = map(
-  and(or3(regExpSingleChar, characterClass, parenthesizedRegExp), optional(quantifier)),
-  ([expr, limits]) =>
-    limits === EMPTY_STRING
-      ? expr
-      : {
-          type: 'repetition',
-          expr,
-          limits,
-        }
+// const regExpfactor: Parser<RegExpTypePart> = map(
+//   and(or3(regExpSingleChar, characterClass, parenthesizedRegExp), optional(quantifier)),
+//   ([expr, limits]) =>
+//     limits === EMPTY_STRING
+//       ? expr
+//       : {
+//           type: 'repetition',
+//           expr,
+//           limits,
+//         }
+// )
+
+const repetitionRegExp: Parser<RepetitionType> = map(
+  and(or3(regExpSingleChar, characterClassRegExp, parenthesizedRegExp), quantifier),
+  ([expr, limits]) => ({
+    type: 'repetition',
+    expr,
+    limits,
+  })
+)
+
+const regExpfactor: Parser<RegExpTypePart> = or4(
+  repetitionRegExp,
+  regExpSingleChar,
+  characterClassRegExp,
+  parenthesizedRegExp
 )
 
 const evaluateRegExpPart = (part: RegExpTypePart): Parser<string> => {
