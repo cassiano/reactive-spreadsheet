@@ -184,6 +184,11 @@ export const manyN =
 
     if (isError(result)) return min > 0 ? [result, input] : [[], input]
 
+    if (rest.length === input.length) {
+      // Successful match but no characters consumed. Avoid an infinite loop.
+      return [[], input]
+    }
+
     return map(manyN(parser, { min: min - 1, max: max - 1 }), otherResults => [
       result,
       ...otherResults,
