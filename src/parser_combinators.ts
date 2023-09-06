@@ -1,5 +1,21 @@
 import { RefType } from './spreadsheet_utils.ts'
 
+type MemoizableFnType<T> = (...args: any[]) => T
+
+const memoize = <T>(fn: MemoizableFnType<T>): MemoizableFnType<T> => {
+  const cache: { [key: string]: T } = {}
+
+  const memoizedFn: MemoizableFnType<T> = (...args) => {
+    const key = JSON.stringify(args)
+
+    if (!(key in cache)) cache[key] = fn(...args)
+
+    return cache[key]
+  }
+
+  return memoizedFn
+}
+
 export const error = (msg: string) => new Error(msg)
 
 export const EMPTY_STRING = ''
@@ -455,8 +471,8 @@ export type ExpressionType =
   | ParenthesizedExpressionType
   | FormulaFnCallType
 
-export const ref = concat(
-  map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()])
+export const ref = memoize(
+  concat(map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()]))
 )
 
 export const NUMBER_1: NumericType = { type: 'numeric', value: 1 }
@@ -478,7 +494,7 @@ export const mapToBinaryOperation = (
 ): Parser<BinaryOperationType> =>
   map(parser, ([left, operator, right]) => createBinaryOperation(left, operator, right))
 
-export const additiveTerm: Parser<ExpressionType> = input => {
+export const additiveTerm: Parser<ExpressionType> = memoize(input => {
   const [result, rest] = or(
     mapToBinaryOperation(
       and3(multiplicativeTerm, or(add, subtract) as Parser<OperatorType>, additiveTerm)
@@ -506,11 +522,11 @@ export const additiveTerm: Parser<ExpressionType> = input => {
   }
 
   return [result, rest]
-}
+})
 
 export const expression = additiveTerm
 
-export const multiplicativeTerm: Parser<ExpressionType> = input => {
+export const multiplicativeTerm: Parser<ExpressionType> = memoize(input => {
   const [result, rest] = or(
     mapToBinaryOperation(
       and3(exponentialTerm, or(multiply, divide) as Parser<OperatorType>, multiplicativeTerm)
@@ -538,34 +554,38 @@ export const multiplicativeTerm: Parser<ExpressionType> = input => {
   }
 
   return [result, rest]
-}
+})
 
-export const exponentialTerm: Parser<ExpressionType> = input =>
+export const exponentialTerm: Parser<ExpressionType> = memoize(input =>
   or(
     mapToBinaryOperation(and3(factor, raise as Parser<OperatorType>, exponentialTerm)),
     factor
   )(input)
+)
 
 export const optionallySigned = <A extends ExpressionType>(parser: Parser<A>) =>
-  map(and(optional(sign), parser), ([signChar, result]) =>
-    signChar === MINUS_SIGN ? createBinaryOperation(NUMBER_MINUS_1, MULTIPLY, result) : result
+  memoize(
+    map(and(optional(sign), parser), ([signChar, result]) =>
+      signChar === MINUS_SIGN ? createBinaryOperation(NUMBER_MINUS_1, MULTIPLY, result) : result
+    )
   )
 
-export const hexDigitToDecimal = (hexDigit: HexDigitType) => {
+export const hexDigitToDecimal = memoize((hexDigit: HexDigitType) => {
   hexDigit = hexDigit.toUpperCase() as HexDigitType
 
   return (
     hexDigit.charCodeAt(0) -
     (hexDigit >= '0' && hexDigit <= '9' ? '0'.charCodeAt(0) : 'A'.charCodeAt(0) - 10)
   )
-}
+})
 
-export const binaryToDecimal = (binary: string): number =>
+export const binaryToDecimal = memoize((binary: string): number =>
   binary
     .split('')
     .reduce((acc, bit, i) => acc + +(bit as BitType) * BASE_2 ** (binary.length - 1 - i), 0)
+)
 
-export const hexToDecimal = (hex: string): number =>
+export const hexToDecimal = memoize((hex: string): number =>
   hex
     .split('')
     .reduce(
@@ -573,49 +593,60 @@ export const hexToDecimal = (hex: string): number =>
         acc + hexDigitToDecimal(hexDigit as HexDigitType) * BASE_16 ** (hex.length - 1 - i),
       0
     )
-
-export const operand: Parser<ExpressionType> = or(
-  map(or3(map(binaryNumber, binaryToDecimal), map(hexNumber, hexToDecimal), numeric), value => ({
-    type: 'numeric',
-    value,
-  })),
-  optionallySigned(map(ref, ref => ({ type: 'reference', ref })))
 )
 
-export const parenthesizedExpression: Parser<ExpressionType> = optionallySigned(
-  map(delimitedBy(openParens, expression, closeParens), expr => ({
-    type: 'parenthesizedExpression',
-    expr,
-  }))
+export const operand: Parser<ExpressionType> = memoize(
+  or(
+    map(or3(map(binaryNumber, binaryToDecimal), map(hexNumber, hexToDecimal), numeric), value => ({
+      type: 'numeric',
+      value,
+    })),
+    optionallySigned(map(ref, ref => ({ type: 'reference', ref })))
+  )
+)
+
+export const parenthesizedExpression: Parser<ExpressionType> = memoize(
+  optionallySigned(
+    map(delimitedBy(openParens, expression, closeParens), expr => ({
+      type: 'parenthesizedExpression',
+      expr,
+    }))
+  )
 )
 
 export const colon = spaced(char(':'))
 export const comma = spaced(char(','))
 
-export const range: Parser<RangeType> = map(joinedBy(ref, colon), ([from, to]) => ({
-  type: 'range',
-  from,
-  to,
-}))
-
-export const fnParameter: Parser<ExpressionType | RangeType> = or(range, expression)
-
-export const formulaFnCall: Parser<FormulaFnCallType> = map(
-  and(
-    identifier,
-    delimitedBy(
-      openParens,
-      optional(and(fnParameter, many(precededBy(comma, fnParameter)))),
-      closeParens
-    )
-  ),
-  ([fnName, params]) => ({
-    type: 'formulaFnCall',
-    fnName,
-    parameters: params === EMPTY_STRING ? [] : params.flat(),
-  })
+export const range: Parser<RangeType> = memoize(
+  map(joinedBy(ref, colon), ([from, to]) => ({
+    type: 'range',
+    from,
+    to,
+  }))
 )
 
-export const factor: Parser<ExpressionType> = or3(operand, parenthesizedExpression, formulaFnCall)
+export const fnParameter: Parser<ExpressionType | RangeType> = memoize(or(range, expression))
+
+export const formulaFnCall: Parser<FormulaFnCallType> = memoize(
+  map(
+    and(
+      identifier,
+      delimitedBy(
+        openParens,
+        optional(and(fnParameter, many(precededBy(comma, fnParameter)))),
+        closeParens
+      )
+    ),
+    ([fnName, params]) => ({
+      type: 'formulaFnCall',
+      fnName,
+      parameters: params === EMPTY_STRING ? [] : params.flat(),
+    })
+  )
+)
+
+export const factor: Parser<ExpressionType> = memoize(
+  or3(operand, parenthesizedExpression, formulaFnCall)
+)
 
 export const formula: Parser<ExpressionType> = precededBy(equals, expression)
