@@ -3,14 +3,22 @@ import { RefType } from './spreadsheet_utils.ts'
 type MemoizableFnType<T> = (...args: any[]) => T
 
 const memoize = <T>(fn: MemoizableFnType<T>): MemoizableFnType<T> => {
-  const cache: { [key: string]: T } = {}
+  const cache: [key: unknown[], value: T][] = []
 
   const memoizedFn: MemoizableFnType<T> = (...args) => {
-    const key = JSON.stringify(args)
+    let fnResult: T
 
-    if (!(key in cache)) cache[key] = fn(...args)
+    const entry = cache.find(item => item[0].every((parameter, i) => parameter === args[i]))
 
-    return cache[key]
+    if (entry === undefined) {
+      fnResult = fn(...args)
+
+      cache.unshift([args, fnResult])
+    } else {
+      fnResult = entry[1]
+    }
+
+    return fnResult
   }
 
   return memoizedFn
