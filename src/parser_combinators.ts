@@ -1,21 +1,21 @@
-import { RefType } from './spreadsheet_utils.ts'
+import { RefType } from './spreadsheet_utils.ts';
 
 type MemoizableFnType<T> = (...args: any[]) => T
 
 const memoize = <T>(fn: MemoizableFnType<T>): MemoizableFnType<T> => {
-  const cache: [key: unknown[], value: T][] = []
+  const cache: { key: unknown[]; value: T }[] = []
 
   const memoizedFn: MemoizableFnType<T> = (...args) => {
     let fnResult: T
 
-    const entry = cache.find(item => item[0].every((parameter, i) => parameter === args[i]))
+    const entry = cache.find(({ key }) => key.every((param, i) => param === args[i]))
 
     if (entry === undefined) {
       fnResult = fn(...args)
 
-      cache.unshift([args, fnResult])
+      cache.unshift({ key: args, value: fnResult })
     } else {
-      fnResult = entry[1]
+      fnResult = entry.value
     }
 
     return fnResult
