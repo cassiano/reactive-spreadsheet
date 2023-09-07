@@ -596,5 +596,4 @@ export const subjects = (computedSignalWrapper: IComputedSignalWrapper<any>) =>
 export const observers = (signalWrapper: SignalWrapperType<any>) =>
   [...signalWrapper.signal.observers].map(observer => BaseSignal.label(observer))
 
-export const times = <T>(n: number, fn: (index: number) => T): T[] =>
-  [...Array(n).keys()].map(i => fn(i))
+export const times = <T>(n: number, fn: (index: number) => T): T[] => [...Array(n).keys()].map(fn)
