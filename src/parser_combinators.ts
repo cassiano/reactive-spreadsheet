@@ -2,7 +2,7 @@ import { RefType } from './spreadsheet_utils.ts'
 
 type MemoizableFnType<T> = (...args: any[]) => T
 
-const memoize = <T>(fn: MemoizableFnType<T>): MemoizableFnType<T> => {
+export const memoize = <T>(fn: MemoizableFnType<T>): MemoizableFnType<T> => {
   const cache: { key: unknown[]; value: T }[] = []
 
   const memoizedFn: MemoizableFnType<T> = (...args) => {
