@@ -2,8 +2,9 @@ import { RefType } from './spreadsheet_utils.ts'
 
 type MemoizableFnType<T> = (...args: any[]) => T
 
-export const memoize = <T>(fn: MemoizableFnType<T>): MemoizableFnType<T> => {
+export const memoize = <T>(name: string, fn: MemoizableFnType<T>): MemoizableFnType<T> => {
   const cache: { key: unknown[]; value: T }[] = []
+  const stats = { hits: 0, misses: 0 }
 
   const memoizedFn: MemoizableFnType<T> = (...args) => {
     let value: T
@@ -12,11 +13,29 @@ export const memoize = <T>(fn: MemoizableFnType<T>): MemoizableFnType<T> => {
 
     if (entry !== undefined) {
       value = entry.value
+
+      stats.hits++
+      console.log(
+        `%c+++++ [${name}] Cache hit for key ${JSON.stringify(args)} and value ${JSON.stringify(
+          value
+        )} +++++`,
+        'color: green'
+      )
     } else {
       value = fn(...args)
 
       cache.unshift({ key: args, value })
+
+      stats.misses++
+      console.log(
+        `%c---- [${name}] Cache miss for key ${JSON.stringify(args)} and value ${JSON.stringify(
+          value
+        )} ----`,
+        'color: red'
+      )
     }
+
+    console.log('name:', name, 'stats:', stats, 'entries:', cache.length)
 
     return value
   }
@@ -527,6 +546,7 @@ export type BooleanExpressionType = {
 }
 
 export const ref = memoize(
+  'ref',
   concat(map(and(letters, naturalGreaterThanZero), ([col, row]) => [...col, row.toString()]))
 )
 
@@ -547,9 +567,12 @@ export const createBinaryOperation = (
 export const mapToBinaryOperation = (
   parser: Parser<[ExpressionType, OperatorType, ExpressionType]>
 ): Parser<BinaryOperationType> =>
-  memoize(map(parser, ([left, operator, right]) => createBinaryOperation(left, operator, right)))
+  memoize(
+    'mapToBinaryOperation',
+    map(parser, ([left, operator, right]) => createBinaryOperation(left, operator, right))
+  )
 
-export const additiveTerm: Parser<ExpressionType> = memoize(input => {
+export const additiveTerm: Parser<ExpressionType> = memoize('additiveTerm', input => {
   const [result, rest] = or(
     mapToBinaryOperation(
       and3(multiplicativeTerm, or(add, subtract) as Parser<OperatorType>, additiveTerm)
@@ -581,7 +604,7 @@ export const additiveTerm: Parser<ExpressionType> = memoize(input => {
 
 export const expression = additiveTerm
 
-export const multiplicativeTerm: Parser<ExpressionType> = memoize(input => {
+export const multiplicativeTerm: Parser<ExpressionType> = memoize('multiplicativeTerm', input => {
   const [result, rest] = or(
     mapToBinaryOperation(
       and3(exponentialTerm, or(multiply, divide) as Parser<OperatorType>, multiplicativeTerm)
@@ -611,7 +634,7 @@ export const multiplicativeTerm: Parser<ExpressionType> = memoize(input => {
   return [result, rest]
 })
 
-export const exponentialTerm: Parser<ExpressionType> = memoize(input =>
+export const exponentialTerm: Parser<ExpressionType> = memoize('exponentialTerm', input =>
   or(
     mapToBinaryOperation(and3(factor, raise as Parser<OperatorType>, exponentialTerm)),
     factor
@@ -620,12 +643,13 @@ export const exponentialTerm: Parser<ExpressionType> = memoize(input =>
 
 export const optionallySigned = <A extends ExpressionType>(parser: Parser<A>) =>
   memoize(
+    'optionallySigned',
     map(and(optional(sign), parser), ([signChar, result]) =>
       signChar === MINUS_SIGN ? createBinaryOperation(NUMBER_MINUS_1, MULTIPLY, result) : result
     )
   )
 
-export const hexDigitToDecimal = memoize((hexDigit: HexDigitType) => {
+export const hexDigitToDecimal = memoize('hexDigitToDecimal', (hexDigit: HexDigitType) => {
   hexDigit = hexDigit.toUpperCase() as HexDigitType
 
   return (
@@ -634,13 +658,13 @@ export const hexDigitToDecimal = memoize((hexDigit: HexDigitType) => {
   )
 })
 
-export const binaryToDecimal = memoize((binary: string): number =>
+export const binaryToDecimal = memoize('binaryToDecimal', (binary: string): number =>
   binary
     .split('')
     .reduce((acc, bit, i) => acc + +(bit as BitType) * BASE_2 ** (binary.length - 1 - i), 0)
 )
 
-export const hexToDecimal = memoize((hex: string): number =>
+export const hexToDecimal = memoize('hexToDecimal', (hex: string): number =>
   hex
     .split('')
     .reduce(
@@ -651,6 +675,7 @@ export const hexToDecimal = memoize((hex: string): number =>
 )
 
 export const operand: Parser<ExpressionType> = memoize(
+  'operand',
   or(
     map(or3(map(binaryNumber, binaryToDecimal), map(hexNumber, hexToDecimal), numeric), value => ({
       type: 'numeric',
@@ -661,6 +686,7 @@ export const operand: Parser<ExpressionType> = memoize(
 )
 
 export const parenthesizedExpression: Parser<ExpressionType> = memoize(
+  'parenthesizedExpression',
   optionallySigned(
     map(delimitedBy(openParens, expression, closeParens), expr => ({
       type: 'parenthesizedExpression',
@@ -673,6 +699,7 @@ export const colon = spaced(char(':'))
 export const comma = spaced(char(','))
 
 export const range: Parser<RangeType> = memoize(
+  'range',
   map(joinedBy(ref, colon), ([from, to]) => ({
     type: 'range',
     from,
@@ -681,6 +708,7 @@ export const range: Parser<RangeType> = memoize(
 )
 
 export const booleanExpression: Parser<BooleanExpressionType> = memoize(
+  'booleanExpression',
   map(
     and3(
       expression,
@@ -704,10 +732,12 @@ export const booleanExpression: Parser<BooleanExpressionType> = memoize(
 )
 
 export const fnParameter: Parser<FnParameterType> = memoize(
+  'fnParameter',
   or3(range, booleanExpression, expression)
 )
 
 export const formulaFnCall: Parser<FormulaFnCallType> = memoize(
+  'formulaFnCall',
   map(
     and(
       identifier,
@@ -726,6 +756,7 @@ export const formulaFnCall: Parser<FormulaFnCallType> = memoize(
 )
 
 export const factor: Parser<ExpressionType> = memoize(
+  'factor',
   or3(operand, parenthesizedExpression, formulaFnCall)
 )
 
