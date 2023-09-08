@@ -4,17 +4,27 @@ type MemoizableFnType<T> = (...args: any[]) => T
 
 export const memoize = <T>(name: string, fn: MemoizableFnType<T>): MemoizableFnType<T> => {
   const cache: { key: unknown[]; value: T }[] = []
-  const stats = { hits: 0, misses: 0 }
+  const stats = { hits: 0, misses: 0, averageHitFindCount: 0 }
+  let hitFindCount = 0
 
   const memoizedFn: MemoizableFnType<T> = (...args) => {
     let value: T
+    let count = 0
 
-    const entry = cache.find(({ key }) => key.every((param, i) => param === args[i]))
+    const entry = cache.find(({ key }) =>
+      key.every((param, i) => {
+        count++
+        return param === args[i]
+      })
+    )
 
     if (entry !== undefined) {
       value = entry.value
 
+      hitFindCount += count
       stats.hits++
+      stats.averageHitFindCount = hitFindCount / stats.hits
+
       console.log(
         `%c+++++ [${name}] Cache hit for key ${JSON.stringify(args)} and value ${JSON.stringify(
           value
@@ -27,6 +37,7 @@ export const memoize = <T>(name: string, fn: MemoizableFnType<T>): MemoizableFnT
       cache.unshift({ key: args, value })
 
       stats.misses++
+
       console.log(
         `%c---- [${name}] Cache miss for key ${JSON.stringify(args)} and value ${JSON.stringify(
           value
