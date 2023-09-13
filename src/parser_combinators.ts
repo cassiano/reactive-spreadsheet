@@ -24,6 +24,25 @@ export const memoize = <T>(fn: MemoizableFnType<T>): MemoizableFnType<T> => {
   return memoizedFn
 }
 
+// const memoize = <T>(fn: MemoizableFnType<T>): MemoizableFnType<T> => {
+//   const cache: { [key: string]: T } = {}
+//
+//   const memoizedFn: MemoizableFnType<T> = (...args) => {
+//     if (args.some(arg => typeof arg === 'function'))
+//       throw new Error(
+//         'Sorry, this function has at least 1 function argument and cannot be memoized!'
+//       )
+//
+//     const key = JSON.stringify(args)
+//
+//     if (!(key in cache)) cache[key] = fn(...args)
+//
+//     return cache[key]
+//   }
+//
+//   return memoizedFn
+// }
+
 export const error = (msg: string) => new Error(msg)
 
 export const EMPTY_STRING = ''
