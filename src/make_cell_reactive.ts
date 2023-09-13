@@ -15,6 +15,7 @@ import {
   updateCellFormula,
   updateCellValue,
   findOrCreateAndEvaluateCell,
+  CellType,
 } from './spreadsheet_utils'
 
 let shiftPressed: boolean = false
@@ -36,7 +37,7 @@ export const makeCellNavigatable = (
   ref: RefType,
   el: HTMLInputElement,
   sheet: SheetType,
-  cellnputs: CellInputsType
+  cellInputs: CellInputsType
 ) => {
   const { row, col } = asCoords(ref)
 
@@ -51,7 +52,7 @@ export const makeCellNavigatable = (
         targetRef = asRef([(row % sheet.rows) + 1, row < sheet.rows ? col : (col % sheet.cols) + 1])
 
         saveFocusedRef(targetRef)
-        setTimeout(() => cellnputs[targetRef!].focus(), 0)
+        setTimeout(() => cellInputs[targetRef!].focus(), 0)
         break
 
       case 'ArrowUp':
@@ -60,18 +61,18 @@ export const makeCellNavigatable = (
           row > 1 ? col : ((sheet.cols + col - 2) % sheet.cols) + 1,
         ])
 
-        cellnputs[targetRef].focus()
+        cellInputs[targetRef].focus()
         break
 
       case 'Tab': {
         if (shiftPressed && row === 1 && col === 1) {
           e.preventDefault()
 
-          cellnputs[asRef([sheet.rows, sheet.cols])].focus()
+          cellInputs[asRef([sheet.rows, sheet.cols])].focus()
         } else if (!shiftPressed && row === sheet.rows && col === sheet.cols) {
           e.preventDefault()
 
-          cellnputs['A1'].focus()
+          cellInputs['A1'].focus()
         }
 
         break
@@ -82,12 +83,12 @@ export const makeCellNavigatable = (
         break
 
       case 'Escape':
-        const sheetRef = sheet.cells[ref]
+        const sheetRef: CellType | undefined = sheet.cells[ref]
 
-        cellnputs[ref].value =
-          ref in sheet
+        cellInputs[ref].value =
+          sheetRef !== undefined
             ? sheetRef.formula !== undefined
-              ? sheetRef.formula.toString()
+              ? sheetRef.formula.rawValue
               : sheetRef.signalWrapper().toString()
             : ''
         break
