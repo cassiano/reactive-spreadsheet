@@ -69,8 +69,11 @@ export type SheetType = {
 
 export const sequence = (count: number) => times(count, i => i)
 
-export const sequenceReduce = <T>(number: number, fn: (acc: T, item: number) => T, initialAcc: T) =>
-  sequence(number).reduce(fn, initialAcc)
+export const sequenceReduce = <T>(
+  number: number,
+  fn: (acc: T, item: number) => T,
+  initialAcc: T,
+) => sequence(number).reduce(fn, initialAcc)
 
 // Converts 'A' to 1, 'B' to 2... 'Z' to 26.
 export const colIndexFromSingleLetter = (colSingleRef: LetterType): number => {
@@ -83,8 +86,10 @@ export const colIndexFromLabel = (colRef: ColRefType): number => {
     .split('')
     .reduce(
       (acc, letter, i) =>
-        acc + colIndexFromSingleLetter(letter) * ALPHABET_LENGTH ** (colRef.length - i - 1),
-      0
+        acc +
+        colIndexFromSingleLetter(letter) *
+          ALPHABET_LENGTH ** (colRef.length - i - 1),
+      0,
     )
 }
 
@@ -94,7 +99,9 @@ export const colSingleLetter = (colIndex: number): LetterType => {
 }
 
 // Converts 1 to 'A', 2 to 'B'... 26 to 'Z', 27 to 'AA' etc
-export const colAsLabel = (colIndexOrLabel: number | ColRefType): ColRefType => {
+export const colAsLabel = (
+  colIndexOrLabel: number | ColRefType,
+): ColRefType => {
   if (typeof colIndexOrLabel === 'string') return colIndexOrLabel
 
   let colIndex = colIndexOrLabel - 1
@@ -134,14 +141,15 @@ export const asRef = (refOrCoords: RefOrRowColType): RefType => {
   return colAsLabel(col) + String(row)
 }
 
-export const range = (from: number, to: number) => times(to - from + 1, i => i + from)
+export const range = (from: number, to: number) =>
+  times(to - from + 1, i => i + from)
 
 export const expandRange = (from: RefType, to: RefType) => {
   const fromCoords = asCoords(from)
   const toCoords = asCoords(to)
 
   return range(fromCoords.row, toCoords.row).map(row =>
-    range(fromCoords.col, toCoords.col).map(col => asRef([row, col]))
+    range(fromCoords.col, toCoords.col).map(col => asRef([row, col])),
   )
 }
 
@@ -168,13 +176,25 @@ const FORMULA_FUNCTIONS = {
     return Math.min(...args.flat(2))
   },
   rows: function (args: (number | number[][])[]) {
-    if (!(args.length === 1 && Array.isArray(args[0]) && Array.isArray(args[0][0])))
+    if (
+      !(
+        args.length === 1 &&
+        Array.isArray(args[0]) &&
+        Array.isArray(args[0][0])
+      )
+    )
       throw new Error(`Invalid arguments passed to function 'rows'`)
 
     return args[0].length
   },
   cols: function (args: (number | number[][])[]) {
-    if (!(args.length === 1 && Array.isArray(args[0]) && Array.isArray(args[0][0])))
+    if (
+      !(
+        args.length === 1 &&
+        Array.isArray(args[0]) &&
+        Array.isArray(args[0][0])
+      )
+    )
       throw new Error(`Invalid arguments passed to function 'cols'`)
 
     return args[0][0].length
@@ -198,12 +218,12 @@ const FORMULA_FUNCTIONS = {
 
 const evaluateRange = (sheet: SheetType, range: RangeType) =>
   expandRange(range.from, range.to).map(row =>
-    row.map(ref => findOrCreateAndEvaluateCell(sheet, ref.toUpperCase()))
+    row.map(ref => findOrCreateAndEvaluateCell(sheet, ref.toUpperCase())),
   )
 
 const evaluateBooleanExpression = (
   sheet: SheetType,
-  booleanExpr: BooleanExpressionType
+  booleanExpr: BooleanExpressionType,
 ): number => {
   const booleanToNumber = (value: boolean) => (value === true ? 1 : 0)
 
@@ -272,30 +292,40 @@ const evaluateExpression = (sheet: SheetType, expr: ExpressionType): number => {
         case RAISE_ALT:
           return left ** right
         default: {
-          const _exhaustiveCheck1: never = expr.operator
-          throw new Error(`Invalid operator ${expr.operator}`)
+          const _exhaustiveCheck: never = expr.operator
+          throw new Error(
+            `[${_exhaustiveCheck}] Invalid operator ${expr.operator}`,
+          )
         }
       }
 
     case 'formulaFnCall':
       const fnName = expr.fnName.toLocaleLowerCase()
-      const parameters = expr.parameters.map(param => evaluateParam(sheet, param))
+      const parameters = expr.parameters.map(param =>
+        evaluateParam(sheet, param),
+      )
 
       if (fnName in FORMULA_FUNCTIONS) {
         // TODO: Review code below.
-        return FORMULA_FUNCTIONS[fnName as keyof typeof FORMULA_FUNCTIONS](parameters)
+        return FORMULA_FUNCTIONS[fnName as keyof typeof FORMULA_FUNCTIONS](
+          parameters,
+        )
       } else {
         throw new Error(`Invalid formula function '${fnName}' called.`)
       }
 
     default: {
-      const _exhaustiveCheck2: never = expr
-      throw new Error('Invalid expression type')
+      const _exhaustiveCheck: never = expr
+      throw new Error(`[${_exhaustiveCheck}] Invalid expression type`)
     }
   }
 }
 
-export const evaluateFormula = (sheet: SheetType, value: string, ref: RefType): number => {
+export const evaluateFormula = (
+  sheet: SheetType,
+  value: string,
+  ref: RefType,
+): number => {
   let expression: ExpressionType | Error
   const cell: CellType = sheet.cells[ref]
   const useCachedVersion = cell.formula?.parsedValue !== undefined
@@ -310,7 +340,8 @@ export const evaluateFormula = (sheet: SheetType, value: string, ref: RefType): 
     const match = formula(value.trim())
     expression = match[0]
 
-    if (isError(expression) || match[1] !== '') throw `Invalid formula '${value}' for cell ${ref}`
+    if (isError(expression) || match[1] !== '')
+      throw `Invalid formula '${value}' for cell ${ref}`
 
     cell.formula!.parsedValue = expression
   }
@@ -318,9 +349,15 @@ export const evaluateFormula = (sheet: SheetType, value: string, ref: RefType): 
   return evaluateExpression(sheet, expression)
 }
 
-const upsertCell = (sheet: SheetType, ref: RefType, fn: () => number, formula?: string) => {
+const upsertCell = (
+  sheet: SheetType,
+  ref: RefType,
+  fn: () => number,
+  formula?: string,
+) => {
   if (ref in sheet.cells) {
-    sheet.cells[ref].formula = formula !== undefined ? { rawValue: formula } : undefined
+    sheet.cells[ref].formula =
+      formula !== undefined ? { rawValue: formula } : undefined
 
     sheet.cells[ref].signalWrapper.set(fn)
   } else {
@@ -345,20 +382,28 @@ export const loadSheet = (sheetData: SheetDataType) => {
         const fn = () => evaluateFormula(sheet, trimmeValue, ref)
 
         upsertCell(sheet, ref, fn, trimmeValue)
-      } else throw new Error(`Invalid formula: '${trimmeValue}' must start with '='`)
+      } else
+        throw new Error(`Invalid formula: '${trimmeValue}' must start with '='`)
     }
   })
 
   return sheet
 }
 
-export const addCell = (sheet: SheetType, ref: RefType, fn: () => number, formula?: string) => {
+export const addCell = (
+  sheet: SheetType,
+  ref: RefType,
+  fn: () => number,
+  formula?: string,
+) => {
   sheet.cells[ref] = {
     formula: formula !== undefined ? { rawValue: formula } : undefined,
     signalWrapper: computed(ref, () => 0), // Temporary signal. It will be replaced below, after the cell is created.
   }
 
-  sheet.cells[ref].signalWrapper = computed(ref, fn, { kind: ComputedSignalKind.Eager })
+  sheet.cells[ref].signalWrapper = computed(ref, fn, {
+    kind: ComputedSignalKind.Eager,
+  })
 
   const { row, col } = asCoords(ref)
 
@@ -366,7 +411,11 @@ export const addCell = (sheet: SheetType, ref: RefType, fn: () => number, formul
   sheet.cols = Math.max(sheet.cols, col)
 }
 
-export const updateCellFormula = (sheet: SheetType, ref: RefType, newFormula: string) => {
+export const updateCellFormula = (
+  sheet: SheetType,
+  ref: RefType,
+  newFormula: string,
+) => {
   ref = ref.toUpperCase()
 
   const sheetRef = sheet.cells[ref]
@@ -375,7 +424,11 @@ export const updateCellFormula = (sheet: SheetType, ref: RefType, newFormula: st
   sheetRef.signalWrapper.set(() => evaluateFormula(sheet, newFormula, ref))
 }
 
-export const updateCellValue = (sheet: SheetType, ref: RefType, newValue: number) => {
+export const updateCellValue = (
+  sheet: SheetType,
+  ref: RefType,
+  newValue: number,
+) => {
   ref = ref.toUpperCase()
 
   const sheetRef = sheet.cells[ref]
@@ -393,17 +446,22 @@ export const sheetAsJson = (sheet: SheetType) =>
       signal: value.signalWrapper.signal,
     })),
     signalReplacerFn,
-    2
+    2,
   )
 
 export const truncate = (text: string, limit: number, filler = ' ') => {
   const paddedText = text.trim().padEnd(limit, filler)
 
-  return paddedText.length <= limit ? paddedText : paddedText.slice(0, limit - 1) + '…'
+  return paddedText.length <= limit
+    ? paddedText
+    : paddedText.slice(0, limit - 1) + '…'
 }
 
 export const sheetAsTable = (sheet: SheetType, padding = 64) => {
-  const colLabels = ['', ...range(1, sheet.cols).map(col => '[' + colAsLabel(col) + ']')]
+  const colLabels = [
+    '',
+    ...range(1, sheet.cols).map(col => '[' + colAsLabel(col) + ']'),
+  ]
   const results = [colLabels]
 
   range(1, sheet.rows).forEach(row => {
@@ -417,9 +475,10 @@ export const sheetAsTable = (sheet: SheetType, padding = 64) => {
       rowResult.push(
         ref in sheet.cells
           ? sheet.cells[ref].formula !== undefined
-            ? sheet.cells[ref].signalWrapper().toString() + ` ${sheet.cells[ref].formula}`
+            ? sheet.cells[ref].signalWrapper().toString() +
+              ` ${sheet.cells[ref].formula}`
             : sheet.cells[ref].signalWrapper().toString()
-          : ''
+          : '',
       )
     })
 
@@ -434,8 +493,13 @@ export const sheetAsTable = (sheet: SheetType, padding = 64) => {
     results
       .map(row =>
         row
-          .map((col, i) => truncate(col.toString(), i === 0 || i === row.length - 1 ? 4 : padding))
-          .join(' | ')
+          .map((col, i) =>
+            truncate(
+              col.toString(),
+              i === 0 || i === row.length - 1 ? 4 : padding,
+            ),
+          )
+          .join(' | '),
       )
       .join('\n') +
     '\n'
@@ -447,11 +511,13 @@ const generateCellColsRows = (
   initialRef: RefType,
   initialValue: CellValueType,
   baseRow: number,
-  baseCol: number
+  baseCol: number,
 ) => {
   const { row, col } = asCoords(initialRef)
   const value =
-    row === baseRow || col === baseCol ? initialValue : `=${colAsLabel(col - 1)}${row - 1}+1`
+    row === baseRow || col === baseCol
+      ? initialValue
+      : `=${colAsLabel(col - 1)}${row - 1}+1`
 
   const verticalResult = sequenceReduce(
     side - 1,
@@ -463,7 +529,7 @@ const generateCellColsRows = (
 
       return acc
     },
-    { [initialRef]: value }
+    { [initialRef]: value },
   )
 
   const horizontalResult = sequenceReduce(
@@ -476,7 +542,7 @@ const generateCellColsRows = (
 
       return acc
     },
-    { [initialRef]: value }
+    { [initialRef]: value },
   )
 
   return { ...(verticalResult as object), ...(horizontalResult as object) }
@@ -485,7 +551,7 @@ const generateCellColsRows = (
 export const generateCellSquares = (
   side: number,
   initialRef: RefType,
-  initialValue: CellValueType
+  initialValue: CellValueType,
 ): SheetDataType => {
   const { row, col } = asCoords(initialRef)
 
@@ -494,9 +560,15 @@ export const generateCellSquares = (
     (acc: object, i: number): object =>
       Object.assign(
         acc,
-        generateCellColsRows(side - i, asRef([i + row, i + col]), initialValue, row, col)
+        generateCellColsRows(
+          side - i,
+          asRef([i + row, i + col]),
+          initialValue,
+          row,
+          col,
+        ),
       ),
-    {}
+    {},
   )
 }
 
@@ -509,7 +581,8 @@ interface CartesianDirectionSubType2 {
   walk: (ref: RefType, step?: number) => RefType
 }
 
-type CartesianDirection = CartesianDirectionSubType1 & CartesianDirectionSubType2
+type CartesianDirection = CartesianDirectionSubType1 &
+  CartesianDirectionSubType2
 
 const CARTESIAN_DIRECTIONS: Record<CardinalDirection, CartesianDirection> = {
   north: {
@@ -551,7 +624,7 @@ export function generateSpiralSequence(
   initialDirection: CardinalDirection,
   directionToTurn: TurnDirection,
   initialCells: Record<RefType, CellValueType>[],
-  fn: (i: number, previousRefs: RefType[], nextRef: RefType) => CellValueType
+  fn: (i: number, previousRefs: RefType[], nextRef: RefType) => CellValueType,
 ): SheetDataType {
   let currentRef = Object.keys(initialCells[initialCells.length - 1])[0]
 
@@ -563,7 +636,9 @@ export function generateSpiralSequence(
   let stepsWalkedInDirection = initialCells.length
 
   const count =
-    sequenceReduce(firstSegmentSize - 1, (acc, i) => acc + (i + 1), 0) - initialCells.length + 2
+    sequenceReduce(firstSegmentSize - 1, (acc, i) => acc + (i + 1), 0) -
+    initialCells.length +
+    2
 
   return sequenceReduce(
     count - 1,
@@ -580,15 +655,20 @@ export function generateSpiralSequence(
         stepsWalkedInDirection = 1
       }
 
-      acc[currentRef] = fn(i, previousRefs, CARTESIAN_DIRECTIONS[direction].walk(currentRef))
+      acc[currentRef] = fn(
+        i,
+        previousRefs,
+        CARTESIAN_DIRECTIONS[direction].walk(currentRef),
+      )
 
       return acc
     },
-    initialCells.reduce((acc, item) => Object.assign(acc, item), {})
+    initialCells.reduce((acc, item) => Object.assign(acc, item), {}),
   ) as SheetDataType
 }
 
-export const repeat = (count: number, fn: (i: number) => string) => times(count, fn).join('')
+export const repeat = (count: number, fn: (i: number) => string) =>
+  times(count, fn).join('')
 
 export const deleteKeys = (object: { [key: string]: unknown }) => {
   Object.keys(object).forEach(key => delete object[key])
@@ -597,7 +677,8 @@ export const deleteKeys = (object: { [key: string]: unknown }) => {
 export const inChunksOf = <T>(collection: T[], size: number): T[][] => {
   const results: T[][] = []
 
-  for (let i = 0; i < collection.length; i += size) results.push(collection.slice(i, i + size))
+  for (let i = 0; i < collection.length; i += size)
+    results.push(collection.slice(i, i + size))
 
   return results
 }

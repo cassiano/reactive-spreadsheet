@@ -50,8 +50,8 @@ type SpreadSheetProps = {
 // Components //
 ////////////////
 
-const ColumnLabelTHs: FC<ColumnLabelTHsProps> = ({ cols }) => {
-  return repeat(
+const ColumnLabelTHs: FC<ColumnLabelTHsProps> = ({ cols }) =>
+  repeat(
     cols,
     col => `
       <th class="header-col-${col + 1}">
@@ -59,13 +59,10 @@ const ColumnLabelTHs: FC<ColumnLabelTHsProps> = ({ cols }) => {
       </th>
     `
   )
-}
 
-const Cell: FC<CellProps> = ({ size, row, col }) => {
-  return `
+const Cell: FC<CellProps> = ({ size, row, col }) => `
     <input class="cell" size="${size}" id="${asRef([row + 1, col + 1])}"/>
   `
-}
 
 const FONT_PIXELS_PER_CHAR = 13
 const ROWS_COLS_TO_ADD = 10
@@ -87,19 +84,19 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
       ${repeat(
         rows,
         row => `
-        <tr>
-          <th class="header-row-${row + 1}">${row + 1}</th>
-          ${repeat(
-            cols,
-            col => `
-              <td>
-                ${Cell({ size, row, col })}
-              </td>
-            `
-          )}
-          <th class="header-row-${row + 1}">${row + 1}</th>
-        </tr>
-      `
+          <tr>
+            <th class="header-row-${row + 1}">${row + 1}</th>
+            ${repeat(
+              cols,
+              col => `
+                <td>
+                  ${Cell({ size, row, col })}
+                </td>
+              `
+            )}
+            <th class="header-row-${row + 1}">${row + 1}</th>
+          </tr>
+        `
       )}
       <tr>
         <th>
@@ -252,7 +249,7 @@ const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects
 // )
 
 // Reversed spiral sequence.
-const REVERSED_SEQUENCE_TERMS = 30
+const REVERSED_SEQUENCE_TERMS = 15
 const sheetData: SheetDataType = generateSpiralSequence(
   REVERSED_SEQUENCE_TERMS,
   'south',
