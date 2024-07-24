@@ -1,4 +1,8 @@
-import { makeCellAutoReactive, makeCellNavigatable, makeCellReactive } from './make_cell_reactive'
+import {
+  makeCellAutoReactive,
+  makeCellNavigatable,
+  makeCellReactive,
+} from './make_cell_reactive'
 import {
   SheetDataType,
   SheetType,
@@ -57,7 +61,7 @@ const ColumnLabelTHs: FC<ColumnLabelTHsProps> = ({ cols }) =>
       <th class="header-col-${col + 1}">
         ${colAsLabel(col + 1)}
       </th>
-    `
+    `,
   )
 
 const Cell: FC<CellProps> = ({ size, row, col }) => `
@@ -92,11 +96,11 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
                 <td>
                   ${Cell({ size, row, col })}
                 </td>
-              `
+              `,
             )}
             <th class="header-row-${row + 1}">${row + 1}</th>
           </tr>
-        `
+        `,
       )}
       <tr>
         <th>
@@ -113,7 +117,11 @@ const SpreadSheet: FC<SpreadSheetProps> = ({ sheet: { rows, cols } }) => {
 
 // ---------------------------------------------------------------------------------------------
 
-const displaySheet = (sheet: SheetType, cellInputs: CellInputsType, effects: EffectsType) => {
+const displaySheet = (
+  sheet: SheetType,
+  cellInputs: CellInputsType,
+  effects: EffectsType,
+) => {
   clearPreviousSheetData(cellInputs, effects)
   renderSheet(sheet)
   addSheetBehaviors(sheet, cellInputs, effects)
@@ -124,11 +132,16 @@ const displaySheet = (sheet: SheetType, cellInputs: CellInputsType, effects: Eff
 // ---------------------------------------------------------------------------------------------
 
 const renderSheet = (sheet: SheetType) =>
-  (document.querySelector<HTMLDivElement>('#app')!.innerHTML = SpreadSheet({ sheet }))
+  (document.querySelector<HTMLDivElement>('#app')!.innerHTML = SpreadSheet({
+    sheet,
+  }))
 
 // ---------------------------------------------------------------------------------------------
 
-const clearPreviousSheetData = (cellInputs: CellInputsType, effects: EffectsType) => {
+const clearPreviousSheetData = (
+  cellInputs: CellInputsType,
+  effects: EffectsType,
+) => {
   // Remove all effect signals as observers of the sheet cells.
   Object.entries(effects).forEach(([ref, effect]) => {
     // Notice that there is no need to remove the subject inside the effect, as it will be deleted
@@ -145,24 +158,37 @@ const clearPreviousSheetData = (cellInputs: CellInputsType, effects: EffectsType
 
 // ---------------------------------------------------------------------------------------------
 
-const enableRowColAddition = (linkId: string, rowsToAdd: number, colsToAdd: number) => {
-  document.querySelector<HTMLAnchorElement>(`#${linkId}`)?.addEventListener('click', (e: Event) => {
-    e.preventDefault()
+const enableRowColAddition = (
+  linkId: string,
+  rowsToAdd: number,
+  colsToAdd: number,
+) => {
+  document
+    .querySelector<HTMLAnchorElement>(`#${linkId}`)
+    ?.addEventListener('click', (e: Event) => {
+      e.preventDefault()
 
-    sheet.rows += rowsToAdd
-    sheet.cols += colsToAdd
+      sheet.rows += rowsToAdd
+      sheet.cols += colsToAdd
 
-    refreshSheet()
-  })
+      refreshSheet()
+    })
 }
 
-const addSheetBehaviors = (sheet: SheetType, cellInputs: CellInputsType, effects: EffectsType) => {
-  document.querySelectorAll<HTMLInputElement>('#sheet input.cell').forEach(el => {
-    cellInputs[el.id] = el
-  })
+const addSheetBehaviors = (
+  sheet: SheetType,
+  cellInputs: CellInputsType,
+  effects: EffectsType,
+) => {
+  document
+    .querySelectorAll<HTMLInputElement>('#sheet input.cell')
+    .forEach(el => {
+      cellInputs[el.id] = el
+    })
 
   Object.entries(cellInputs).forEach(([ref, el]) => {
-    if (ref in sheet.cells) makeCellReactive(ref, el, sheet, cellInputs, effects)
+    if (ref in sheet.cells)
+      makeCellReactive(ref, el, sheet, cellInputs, effects)
     else makeCellAutoReactive(ref, el, sheet, cellInputs, effects)
 
     makeCellNavigatable(ref, el, sheet, cellInputs)
@@ -255,7 +281,7 @@ const sheetData: SheetDataType = generateSpiralSequence(
   'south',
   'left',
   [{ A1: '=A2+1' }],
-  (_i, _previousRefs, nextRef) => `=${nextRef}+1`
+  (_i, _previousRefs, nextRef) => `=${nextRef}+1`,
 )
 
 // Cell squares.
@@ -321,7 +347,8 @@ export const saveFocusedRef = (ref: RefType | null) => {
   focusedRef = ref
 }
 
-export const sheetHasExpanded = () => sheet.rows > visible.rows || sheet.cols > visible.cols
+export const sheetHasExpanded = () =>
+  sheet.rows > visible.rows || sheet.cols > visible.cols
 
 export const refreshSheet = () => {
   displaySheet(sheet, sheetCellInputs, cellEffects)
