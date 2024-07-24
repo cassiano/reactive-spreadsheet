@@ -583,11 +583,11 @@ export const createBinaryOperation = (
 
 export const mapToBinaryOperation = (
   parser: Parser<[ExpressionType, OperatorType, ExpressionType]>,
-): Parser<BinaryOperationType> =>
+) =>
   memoize(
     map(parser, ([left, operator, right]) =>
       createBinaryOperation(left, operator, right),
-    ),
+    ) as Parser<BinaryOperationType>,
   )
 
 export const additiveTerm = memoize((input => {
@@ -718,7 +718,7 @@ export const hexToDecimal = memoize((hex: string): number =>
     ),
 )
 
-export const operand: Parser<ExpressionType> = memoize(
+export const operand = memoize(
   or(
     map(
       or3(
@@ -732,30 +732,30 @@ export const operand: Parser<ExpressionType> = memoize(
       }),
     ),
     optionallySigned(map(ref, ref => ({ type: 'reference', ref }))),
-  ),
+  ) as Parser<ExpressionType>,
 )
 
-export const parenthesizedExpression: Parser<ExpressionType> = memoize(
+export const parenthesizedExpression = memoize(
   optionallySigned(
     map(delimitedBy(openParens, expression, closeParens), expr => ({
       type: 'parenthesizedExpression',
       expr,
     })),
-  ),
+  ) as Parser<ExpressionType>,
 )
 
 export const colon = spaced(char(':'))
 export const comma = spaced(char(','))
 
-export const range: Parser<RangeType> = memoize(
+export const range = memoize(
   map(joinedBy(ref, colon), ([from, to]) => ({
     type: 'range',
     from,
     to,
-  })),
+  })) as Parser<RangeType>,
 )
 
-export const booleanExpression: Parser<BooleanExpressionType> = memoize(
+export const booleanExpression = memoize(
   map(
     and3(
       expression,
@@ -775,14 +775,14 @@ export const booleanExpression: Parser<BooleanExpressionType> = memoize(
       operator,
       right,
     }),
-  ),
+  ) as Parser<BooleanExpressionType>,
 )
 
-export const fnParameter: Parser<FnParameterType> = memoize(
-  or3(range, booleanExpression, expression),
+export const fnParameter = memoize(
+  or3(range, booleanExpression, expression) as Parser<FnParameterType>,
 )
 
-export const formulaFnCall: Parser<FormulaFnCallType> = memoize(
+export const formulaFnCall = memoize(
   map(
     and(
       identifier,
@@ -797,11 +797,15 @@ export const formulaFnCall: Parser<FormulaFnCallType> = memoize(
       fnName,
       parameters: params === EMPTY_STRING ? [] : params.flat(),
     }),
-  ),
+  ) as Parser<FormulaFnCallType>,
 )
 
-export const factor: Parser<ExpressionType> = memoize(
-  or3(operand, parenthesizedExpression, formulaFnCall),
+export const factor = memoize(
+  or3(
+    operand,
+    parenthesizedExpression,
+    formulaFnCall,
+  ) as Parser<ExpressionType>,
 )
 
 export const formula: Parser<ExpressionType> = precededBy(equals, expression)
