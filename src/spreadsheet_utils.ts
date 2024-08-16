@@ -376,14 +376,16 @@ export const loadSheet = (sheetData: SheetDataType) => {
 
       upsertCell(sheet, ref, fn)
     } else {
-      const trimmeValue = value.trim()
+      const trimmedValue = value.trim()
 
-      if (trimmeValue[0] === '=') {
-        const fn = () => evaluateFormula(sheet, trimmeValue, ref)
+      if (trimmedValue[0] === '=') {
+        const fn = () => evaluateFormula(sheet, trimmedValue, ref)
 
-        upsertCell(sheet, ref, fn, trimmeValue)
+        upsertCell(sheet, ref, fn, trimmedValue)
       } else
-        throw new Error(`Invalid formula: '${trimmeValue}' must start with '='`)
+        throw new Error(
+          `Invalid formula: '${trimmedValue}' must start with '='`,
+        )
     }
   })
 
