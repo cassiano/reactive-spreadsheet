@@ -65,8 +65,8 @@ const ColumnLabelTHs: FC<ColumnLabelTHsProps> = ({ cols }) =>
   )
 
 const Cell: FC<CellProps> = ({ size, row, col }) => `
-    <input class="cell" size="${size}" id="${asRef([row + 1, col + 1])}"/>
-  `
+  <input class="cell" size="${size}" id="${asRef([row + 1, col + 1])}"/>
+`
 
 const FONT_PIXELS_PER_CHAR = 13
 const ROWS_COLS_TO_ADD = 10
