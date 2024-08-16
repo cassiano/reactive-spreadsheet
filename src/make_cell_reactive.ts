@@ -21,15 +21,19 @@ import {
 let shiftPressed: boolean = false
 
 const highlightHeaderRow = (row: number, highlight: boolean) => {
-  document.querySelectorAll<HTMLTableColElement>(`.header-row-${row}`).forEach(th => {
-    th.classList[highlight ? 'add' : 'remove']('highlighted')
-  })
+  document
+    .querySelectorAll<HTMLTableColElement>(`.header-row-${row}`)
+    .forEach(th => {
+      th.classList[highlight ? 'add' : 'remove']('highlighted')
+    })
 }
 
 const highlightHeaderCol = (col: number, highlight: boolean) => {
-  document.querySelectorAll<HTMLTableColElement>(`.header-col-${col}`).forEach(th => {
-    th.classList[highlight ? 'add' : 'remove']('highlighted')
-  })
+  document
+    .querySelectorAll<HTMLTableColElement>(`.header-col-${col}`)
+    .forEach(th => {
+      th.classList[highlight ? 'add' : 'remove']('highlighted')
+    })
 }
 
 // https://wikidiff.com/navigatable/navigable
@@ -37,7 +41,7 @@ export const makeCellNavigatable = (
   ref: RefType,
   el: HTMLInputElement,
   sheet: SheetType,
-  cellInputs: CellInputsType
+  cellInputs: CellInputsType,
 ) => {
   const { row, col } = asCoords(ref)
 
@@ -49,7 +53,10 @@ export const makeCellNavigatable = (
     switch (e.key) {
       case 'Enter':
       case 'ArrowDown':
-        targetRef = asRef([(row % sheet.rows) + 1, row < sheet.rows ? col : (col % sheet.cols) + 1])
+        targetRef = asRef([
+          (row % sheet.rows) + 1,
+          row < sheet.rows ? col : (col % sheet.cols) + 1,
+        ])
 
         saveFocusedRef(targetRef)
         setTimeout(() => cellInputs[targetRef!].focus(), 0)
@@ -113,14 +120,14 @@ export const makeCellNavigatable = (
   })
 }
 
-let effectVersion: { [ref: RefType]: number } = {}
+const effectVersion: { [ref: RefType]: number } = {}
 
 export const makeCellReactive = (
   ref: RefType,
   el: HTMLInputElement,
   sheet: SheetType,
   cellInputs: CellInputsType,
-  effects: EffectsType
+  effects: EffectsType,
 ) => {
   ref = ref.toUpperCase()
   effectVersion[ref] ??= 1
@@ -163,7 +170,8 @@ export const makeCellReactive = (
 
     const sheetRef = sheet.cells[ref]
 
-    if (sheetRef.formula !== undefined) target.value = sheetRef.formula.rawValue.toString()
+    if (sheetRef.formula !== undefined)
+      target.value = sheetRef.formula.rawValue.toString()
 
     focusTimeoutId = selectCell()
   })
@@ -175,7 +183,8 @@ export const makeCellReactive = (
 
     const sheetRef = sheet.cells[ref]
 
-    if (sheetRef.formula !== undefined) target.value = sheetRef.signalWrapper().toString()
+    if (sheetRef.formula !== undefined)
+      target.value = sheetRef.signalWrapper().toString()
   })
 
   el.addEventListener('click', () => {
@@ -188,7 +197,7 @@ export const makeCellAutoReactive = (
   el: HTMLInputElement,
   sheet: SheetType,
   cellInputs: CellInputsType,
-  effects: EffectsType
+  effects: EffectsType,
 ) => {
   ref = ref.toUpperCase()
 
