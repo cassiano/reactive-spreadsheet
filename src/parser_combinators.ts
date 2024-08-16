@@ -668,13 +668,29 @@ export const multiplicativeTerm = memoize((input => {
   return [result, rest]
 }) as Parser<ExpressionType>)
 
-export const exponentialTerm = memoize((input =>
-  or(
+// https://codeplea.com/exponentiation-associativity-options
+export const exponentialTerm = memoize((input => {
+  const [result, rest] = or(
     mapToBinaryOperation(
       and3(factor, raise as Parser<OperatorType>, exponentialTerm),
     ),
     factor,
-  )(input)) as Parser<ExpressionType>)
+  )(input)
+
+  if (isError(result)) return [result, input]
+
+  // Make exponentiation left-associative by replacing `a^b^c` with `a^(b*c)`, which is equivalent to
+  // `(a^b)^c`.
+  if (
+    result.type === 'binaryOperation' &&
+    [RAISE, RAISE_ALT].indexOf(result.operator) !== -1 &&
+    result.right.type === 'binaryOperation' &&
+    [RAISE, RAISE_ALT].indexOf(result.right.operator) !== -1
+  )
+    result.right.operator = MULTIPLY
+
+  return [result, rest]
+}) as Parser<ExpressionType>)
 
 export const optionallySigned = <A extends ExpressionType>(parser: Parser<A>) =>
   memoize(
